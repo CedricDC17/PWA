@@ -3,13 +3,16 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
+const isDev = process.env.NODE_ENV !== 'production'
+
 export default defineConfig({
   plugins: [
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      // active le SW uniquement en dev
       devOptions: {
-        enabled: true   // active le SW en mode dev
+        enabled: isDev
       },
       manifest: {
         name: 'Ma PWA Test',
@@ -25,22 +28,13 @@ export default defineConfig({
       }
     })
   ],
-  server: {
-    host: true,           // expose sur le réseau local
-    port: 5173,
-    allowedHosts: 'all'   // autorise ngrok ou tout autre host
-  }
+
+  // Ne sert que pour le dev local, Vercel l'ignorera
+  ...(isDev && {
+    server: {
+      host: true,
+      port: 5173,
+      allowedHosts: 'all'
+    }
+  })
 })
-
-
-
-
-
-
-
-
-
-
-
-
-
