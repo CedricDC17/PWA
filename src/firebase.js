@@ -11,13 +11,15 @@ const firebaseConfig = {
     messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
     appId: import.meta.env.VITE_FIREBASE_APP_ID
 }
-console.log("🔑 Firebase Config:", {
-    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID
-})
-
-console.log("🔑 Firebase Config:", firebaseConfig);
+console.log(
+    "🔑 Firebase Config (prod):",
+    JSON.stringify({
+      apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+      authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+      projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID
+    })
+  );
+  
 
 // 1. Initialise l’app Firebase
 const app = initializeApp(firebaseConfig)
