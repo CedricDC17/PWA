@@ -11,7 +11,10 @@ export function FamilyProvider({ children }) {
         // 1. Connexion anonyme
         signInAnonymously(auth)
         // 2. Mise à jour du user
-        const unsub = onAuthStateChanged(auth, u => setUser(u))
+        const unsub = onAuthStateChanged(auth, u => {
+            console.log("User signed in:", u);
+            setUser(u);
+        });
         return unsub
     }, [])
 
