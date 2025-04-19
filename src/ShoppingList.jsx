@@ -5,9 +5,10 @@ import { db } from './firebase'
 import { FamilyCtx } from './FamilyContext'
 
 export default function ShoppingList() {
-    const FAMILY_ID = "sharedFamily";    // ou un code que vous partagez
-    const familyRef = doc(db, "families", FAMILY_ID);
-    const itemsCol = collection(familyRef, "shoppingItems");
+    const familyId = "sharedFamily"
+
+    const col = collection(db, 'families', familyId, 'shoppingItems')
+
     const [items, setItems] = useState([])
 
     useEffect(() => {
