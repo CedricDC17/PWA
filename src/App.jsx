@@ -1,16 +1,25 @@
 // src/App.jsx
-import { FamilyProvider } from './FamilyContext';
+import './App.css';
 import ShoppingList from './ShoppingList';
-import MealPlan     from './MealPlan';
+import MealPlan from './MealPlan';
 
 export default function App() {
   return (
-    <FamilyProvider>
-      <main>
-        <h1 className="text-2xl font-semibold mb-6">Ma PWA Familiale</h1>
-        <ShoppingList />
-        <MealPlan />
-      </main>
-    </FamilyProvider>
-  );
+    <div>
+      <div>
+        <section>
+          <h2>🛒 Liste de courses</h2>
+          <div >
+            <ShoppingList />
+          </div>
+        </section>
+
+        <section>
+          <h2>🍽️ Planning repas</h2>
+          <div>
+            <MealPlan />
+          </div>
+        </section>
+      </div>
+    </div>);
 }
