@@ -24,12 +24,14 @@ body.recipes-page main {
   max-width: none;
   width: 79%;
 }
+
 @media (max-width: 768px) {
   body.recipes-page main {
     max-width: none;
     width: 100%;
   }
 }
+
 button {
   border-radius: 8px;
   border: 1px solid transparent;
@@ -299,10 +301,26 @@ main {
   gap: 25px;
 }
 
+/* Champ de recherche dans l’en‑tête */
 .card-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.search-input {
+  flex: 1;
+  padding: 0.4rem 0.8rem;
+  border: 1px solid #444;
+  border-radius: 4px;
+  background: #2A2A2A;
+  color: #EEE;
+  font-size: 1rem;
+}
+
+.search-input::placeholder {
+  color: #888;
 }
 
 .btn-add {
@@ -458,7 +476,7 @@ main {
   list-style: none;
 }
 
-.section-prep ol{
+.section-prep ol {
   list-style: decimal;
 
 }
