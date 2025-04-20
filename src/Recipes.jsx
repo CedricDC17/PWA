@@ -15,14 +15,15 @@ export default function Recipes() {
   const FAMILY_ID = 'sharedFamily'
   const colRef = collection(db, 'families', FAMILY_ID, 'recipes')
 
-  const [recipes, setRecipes]       = useState([])
-  const [selected, setSelected]     = useState(null)
-  const [editMode, setEditMode]     = useState(false)
+  const [recipes, setRecipes] = useState([])
+  const [selected, setSelected] = useState(null)
+  const [editMode, setEditMode] = useState(false)
   const [draftTitle, setDraftTitle] = useState('')
   const [draftIngredients, setDraftIngredients] = useState([])
   const [draftSteps, setDraftSteps] = useState([])
   const [draftNotes, setDraftNotes] = useState('')
 
+  // — load recipes in real‑time
   useEffect(() => {
     const unsub = onSnapshot(colRef, snap =>
       setRecipes(snap.docs.map(d => ({ id: d.id, ...d.data() })))
@@ -30,192 +31,263 @@ export default function Recipes() {
     return unsub
   }, [])
 
+  // — when recipes page mounts/unmounts
+  useEffect(() => {
+    document.body.classList.add('recipes-page')
+    return () => {
+      document.body.classList.remove('recipes-page')
+    }
+  }, [])
+
+  // — open overlay and initialize drafts
   const openOverlay = r => {
     setSelected(r)
     setEditMode(false)
-    setDraftTitle(r.title)
-    setDraftIngredients([... (r.ingredients || [])])
-    setDraftSteps([ ... (r.steps || [])])
+    setDraftTitle(r.title || '')
+    setDraftIngredients(
+      (r.ingredients || []).map(i => ({
+        name: i.name || '',
+        quantity: i.quantity || ''
+      }))
+    )
+    setDraftSteps(r.steps || [])
     setDraftNotes(r.notes || '')
   }
 
-  const saveAll = async () => {
-    const docRef = doc(db, 'families', FAMILY_ID, 'recipes', selected.id)
-    await updateDoc(docRef, {
-      title:       draftTitle,
-      ingredients: draftIngredients,
-      steps:       draftSteps,
-      notes:       draftNotes
+  // — add new recipe
+  const addRecipe = async () => {
+    const title = prompt('Titre de la nouvelle recette ?')
+    if (!title) return
+    await addDoc(colRef, {
+      title,
+      ingredients: [],
+      steps: [],
+      notes: ''
     })
-    // recharger l’objet sélectionné pour refléter evt. changement
-    setSelected(prev => ({
-      ...prev,
-      title:       draftTitle,
+  }
+
+  // — save all edits
+  const saveAll = async () => {
+    if (!selected) return
+    const ref = doc(db, 'families', FAMILY_ID, 'recipes', selected.id)
+    await updateDoc(ref, {
+      title: draftTitle,
       ingredients: draftIngredients,
-      steps:       draftSteps,
-      notes:       draftNotes
-    }))
+      steps: draftSteps,
+      notes: draftNotes
+    })
+    // reflect locally
+    setSelected({
+      ...selected,
+      title: draftTitle,
+      ingredients: draftIngredients,
+      steps: draftSteps,
+      notes: draftNotes
+    })
     setEditMode(false)
   }
 
-  // helpers pour modifier les listes
-  const setIngredient = (idx, value) => {
-    const arr = [...draftIngredients]
-    arr[idx] = value
-    setDraftIngredients(arr)
-  }
-  const removeIngredient = idx => {
-    setDraftIngredients(ing => ing.filter((_, i) => i !== idx))
-  }
-  const addIngredient = () => {
-    setDraftIngredients(ing => [...ing, ''])
+  // — delete current recipe
+  const deleteCurrent = async () => {
+    if (!selected) return
+    if (confirm('Supprimer cette recette ?')) {
+      await deleteDoc(
+        doc(db, 'families', FAMILY_ID, 'recipes', selected.id)
+      )
+      setSelected(null)
+    }
   }
 
-  const setStep = (idx, value) => {
+  // — ingredient helpers
+  const setIngName = (i, v) => {
+    const arr = [...draftIngredients]
+    arr[i].name = v
+    setDraftIngredients(arr)
+  }
+  const setIngQty = (i, v) => {
+    const arr = [...draftIngredients]
+    arr[i].quantity = v
+    setDraftIngredients(arr)
+  }
+  const addIngredient = () =>
+    setDraftIngredients(ing => [...ing, { name: '', quantity: '' }])
+  const removeIngredient = i =>
+    setDraftIngredients(ing => ing.filter((_, idx) => idx !== i))
+
+  // — step helpers
+  const setStep = (i, v) => {
     const arr = [...draftSteps]
-    arr[idx] = value
+    arr[i] = v
     setDraftSteps(arr)
   }
-  const removeStep = idx => {
-    setDraftSteps(st => st.filter((_, i) => i !== idx))
-  }
-  const addStep = () => {
-    setDraftSteps(st => [...st, ''])
-  }
+  const addStep = () => setDraftSteps(st => [...st, ''])
+  const removeStep = i =>
+    setDraftSteps(st => st.filter((_, idx) => idx !== i))
 
   return (
     <div className="card-container">
+      {/* header */}
       <div className="card-header">
         <h2>Recettes</h2>
-        <button onClick={async () => {
-          const title = prompt('Titre de la nouvelle recette ?')
-          if (title) {
-            await addDoc(colRef, { title, ingredients: [], steps: [], notes: '' })
-          }
-        }} className="btn-add">➕ Nouvelle recette</button>
+        <button className="btn-add" onClick={addRecipe}>
+          ➕ Nouvelle recette
+        </button>
       </div>
 
+      {/* grid of cards */}
       <div className="cards-grid">
+        {recipes.length === 0 && <p>Aucune recette pour l'instant.</p>}
         {recipes.map(r => (
-          <div key={r.id} className="card" onClick={() => openOverlay(r)}>
+          <div
+            key={r.id}
+            className="card"
+            onClick={() => openOverlay(r)}
+          >
             <h3 className="card-title">{r.title}</h3>
-            <div className="card-content">
-              {r.description || '— pas de description —'}
-            </div>
           </div>
         ))}
-        {recipes.length === 0 && <p>Aucune recette pour l'instant.</p>}
       </div>
 
+      {/* full‑screen overlay */}
       {selected && (
         <div className="overlay" onClick={() => setSelected(null)}>
-          <div className="overlay-content" onClick={e => e.stopPropagation()}>
-            <button className="btn-close" onClick={() => setSelected(null)}>✖</button>
+          <div
+            className="overlay-content"
+            onClick={e => e.stopPropagation()}
+          >
+            <button
+              className="btn-close"
+              onClick={() => setSelected(null)}
+            >
+              ✖
+            </button>
 
-            {/* TITRE */}
-            {editMode
-              ? <input
-                  className="overlay-input-title"
-                  value={draftTitle}
-                  onChange={e => setDraftTitle(e.target.value)}
-                />
-              : <h2 className="overlay-title">{selected.title}</h2>
-            }
+            {/* Title */}
+            {editMode ? (
+              <input
+                className="overlay-input-title"
+                value={draftTitle}
+                onChange={e => setDraftTitle(e.target.value)}
+              />
+            ) : (
+              <h2 className="overlay-title">{selected.title}</h2>
+            )}
 
-            {/* INGREDIENTS */}
+            {/* Ingredients */}
             <section className="section">
               <h3>Ingrédients</h3>
-              {editMode
-                ? (
-                  <>
-                    {draftIngredients.map((ing, i) => (
-                      <div key={i} className="list-edit-row">
-                        <input
-                          value={ing}
-                          onChange={e => setIngredient(i, e.target.value)}
-                          placeholder="Ingrédient…"
-                        />
-                        <button onClick={() => removeIngredient(i)}>🗑️</button>
-                      </div>
-                    ))}
-                    <button className="btn-small" onClick={addIngredient}>
-                      ➕ Ajouter un ingrédient
-                    </button>
-                  </>
-                )
-                : (selected.ingredients?.length > 0
-                    ? <ul>
-                        {selected.ingredients.map((ing,i) => <li key={i}>{ing}</li>)}
-                      </ul>
-                    : <p>— aucun ingrédient —</p>
-                  )
-              }
+              {editMode ? (
+                <>
+                  {draftIngredients.map((ing, i) => (
+                    <div key={i} className="list-edit-row">
+                      <input
+                        type="text"
+                        placeholder="Nom…"
+                        value={ing.name}
+                        onChange={e => setIngName(i, e.target.value)}
+                      />
+                      <input
+                        type="text"
+                        placeholder="Qté…"
+                        value={ing.quantity}
+                        onChange={e =>
+                          setIngQty(i, e.target.value)
+                        }
+                        style={{ width: '4rem' }}
+                      />
+                      <button onClick={() => removeIngredient(i)}>
+                        🗑️
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    className="btn-small"
+                    onClick={addIngredient}
+                  >
+                    ➕ Ajouter un ingrédient
+                  </button>
+                </>
+              ) : selected.ingredients?.length ? (
+                <ul>
+                  {selected.ingredients.map((ing, i) => (
+                    <li key={i}>
+                      {ing.name} × {ing.quantity}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p>— aucun ingrédient —</p>
+              )}
             </section>
 
-            {/* ETAPES */}
+            {/* Steps */}
             <section className="section">
               <h3>Préparation</h3>
-              {editMode
-                ? (
-                  <>
-                    {draftSteps.map((step, i) => (
-                      <div key={i} className="list-edit-row">
-                        <input
-                          value={step}
-                          onChange={e => setStep(i, e.target.value)}
-                          placeholder={`Étape ${i+1}…`}
-                        />
-                        <button onClick={() => removeStep(i)}>🗑️</button>
-                      </div>
-                    ))}
-                    <button className="btn-small" onClick={addStep}>
-                      ➕ Ajouter une étape
-                    </button>
-                  </>
-                )
-                : (selected.steps?.length > 0
-                    ? <ol>
-                        {selected.steps.map((st,i) => <li key={i}>{st}</li>)}
-                      </ol>
-                    : <p>— pas d'étapes —</p>
-                  )
-              }
+              {editMode ? (
+                <>
+                  {draftSteps.map((st, i) => (
+                    <div key={i} className="list-edit-row">
+                      <input
+                        type="text"
+                        placeholder={`Étape ${i + 1}…`}
+                        value={st}
+                        onChange={e => setStep(i, e.target.value)}
+                      />
+                      <button onClick={() => removeStep(i)}>
+                        🗑️
+                      </button>
+                    </div>
+                  ))}
+                  <button className="btn-small" onClick={addStep}>
+                    ➕ Ajouter une étape
+                  </button>
+                </>
+              ) : selected.steps?.length ? (
+                <ol>
+                  {selected.steps.map((st, i) => (
+                    <li key={i}>{st}</li>
+                  ))}
+                </ol>
+              ) : (
+                <p>— pas d'étapes —</p>
+              )}
             </section>
 
-            {/* NOTES */}
+            {/* Notes */}
             <section className="section">
               <h3>Notes</h3>
-              {editMode
-                ? <textarea
-                    className="overlay-textarea"
-                    value={draftNotes}
-                    onChange={e => setDraftNotes(e.target.value)}
-                    placeholder="Notes…"
-                  />
-                : <p>{selected.notes || '— aucune note —'}</p>
-              }
+              {editMode ? (
+                <textarea
+                  className="overlay-textarea"
+                  value={draftNotes}
+                  onChange={e => setDraftNotes(e.target.value)}
+                />
+              ) : (
+                <p>{selected.notes || '— aucune note —'}</p>
+              )}
             </section>
 
-            {/* PIED D’OVERLAY */}
+            {/* Footer actions */}
             <div className="overlay-footer">
-              {editMode
-                ? <button className="btn-save" onClick={saveAll}>
-                    💾 Sauvegarder
-                  </button>
-                : <button className="btn-modify" onClick={() => setEditMode(true)}>
-                    ✏️ Modifier
-                  </button>
-              }
+              {editMode ? (
+                <button className="btn-save" onClick={saveAll}>
+                  💾 Sauvegarder
+                </button>
+              ) : (
+                <button
+                  className="btn-modify"
+                  onClick={() => setEditMode(true)}
+                >
+                  ✏️ Modifier
+                </button>
+              )}
               {!editMode && (
                 <button
                   className="btn-delete"
-                  onClick={async () => {
-                    if (confirm("Supprimer cette recette ?")) {
-                      await deleteDoc(doc(db, 'families', FAMILY_ID, 'recipes', selected.id))
-                      setSelected(null)
-                    }
-                  }}
-                >🗑️ Supprimer</button>
+                  onClick={deleteCurrent}
+                >
+                  🗑️ Supprimer
+                </button>
               )}
             </div>
           </div>
