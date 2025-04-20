@@ -1,5 +1,5 @@
 // src/ShoppingList.jsx
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import {
   collection, onSnapshot,
   addDoc, updateDoc, deleteDoc, doc, query, orderBy
@@ -8,11 +8,13 @@ import { db } from './firebase';
 
 export default function ShoppingList() {
   const user = { uid: 'sharedFamily' };
-  const col  = collection(db, 'families', user.uid, 'shoppingItems');
+  const col = collection(db, 'families', user.uid, 'shoppingItems');
 
-  const [items, setItems] = useState([]);
+  const [items, setItems]     = useState([]);
   const [newName, setNewName] = useState('');
   const [newQty, setNewQty]   = useState(1);
+
+  const nameInputRef = useRef(null);
 
   useEffect(() => {
     const q = query(col, orderBy('createdAt'));
@@ -22,19 +24,38 @@ export default function ShoppingList() {
   }, []);
 
   const addItem = async () => {
-    if (!newName.trim()) return;
-    await addDoc(col, { name:newName.trim(), quantity:newQty, checked:false, createdAt:Date.now() });
-    setNewName(''); setNewQty(1);
+    const name = newName.trim();
+    if (!name) return;
+    await addDoc(col, {
+      name,
+      quantity: newQty,
+      checked: false,
+      createdAt: Date.now()
+    });
+    setNewName('');
+    setNewQty(1);
+    nameInputRef.current?.focus();
   };
-  const toggle = item => updateDoc(doc(col,item.id), { checked: !item.checked });
-  const clearSelected = async () => {
-    for (const i of items.filter(i=>i.checked)) {
-      await deleteDoc(doc(col,i.id));
+
+  const handleKeyDown = e => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addItem();
     }
   };
+
+  const toggle = item =>
+    updateDoc(doc(col, item.id), { checked: !item.checked });
+
+  const clearSelected = async () => {
+    for (const i of items.filter(i => i.checked)) {
+      await deleteDoc(doc(col, i.id));
+    }
+  };
+
   const clearAll = async () => {
     for (const i of items) {
-      await deleteDoc(doc(col,i.id));
+      await deleteDoc(doc(col, i.id));
     }
   };
 
@@ -47,38 +68,46 @@ export default function ShoppingList() {
               <input
                 type="checkbox"
                 checked={i.checked}
-                onChange={()=>toggle(i)}
+                onChange={() => toggle(i)}
               />
               <span className={i.checked ? 'checked' : ''}>
                 {i.name} × {i.quantity}
               </span>
             </label>
-            <button onClick={()=>deleteDoc(doc(col,i.id))}>🗑️</button>
+            <button onClick={() => deleteDoc(doc(col, i.id))}>
+              🗑️
+            </button>
           </li>
         ))}
       </ul>
 
       <div className="shopping-form">
         <input
+          ref={nameInputRef}
           type="text"
           value={newName}
-          onChange={e=>setNewName(e.target.value)}
+          onChange={e => setNewName(e.target.value)}
+          onKeyDown={handleKeyDown}            // <-- capture Enter
           placeholder="Ajouter un article…"
         />
         <select
           value={newQty}
-          onChange={e=>setNewQty(+e.target.value)}
+          onChange={e => setNewQty(+e.target.value)}
         >
-          {[...Array(20)].map((_,i)=>
-            <option key={i} value={i+1}>{i+1}</option>
+          {[...Array(20)].map((_, i) =>
+            <option key={i} value={i + 1}>{i + 1}</option>
           )}
         </select>
         <button onClick={addItem}>➕</button>
       </div>
 
       <div className="shopping-actions">
-        <button onClick={clearSelected}>Effacer sélectionnés</button>
-        <button className="clear-all" onClick={clearAll}>Effacer la liste</button>
+        <button onClick={clearSelected}>
+          Effacer sélectionnés
+        </button>
+        <button className="clear-all" onClick={clearAll}>
+          Effacer la liste
+        </button>
       </div>
     </>
   );
