@@ -130,7 +130,7 @@ export default function Recipes() {
       <div className="card-header">
         <h2>Recettes</h2>
         <button className="btn-add" onClick={addRecipe}>
-          ➕ Nouvelle recette
+          ➕ 
         </button>
       </div>
 
