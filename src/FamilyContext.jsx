@@ -1,30 +1,39 @@
-import { createContext, useState, useEffect } from 'react'
-import { auth } from './firebase'
-import { signInAnonymously, onAuthStateChanged } from 'firebase/auth'
+// src/FamilyContext.jsx
+import { createContext, useEffect, useState } from 'react'
+import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth'
+import { auth } from './firebase'  // votre getAuth(app)
 
-export const FamilyCtx = createContext()
+export const FamilyCtx = createContext(null)
 
 export function FamilyProvider({ children }) {
-    const [user, setUser] = useState(null)
+  const [user, setUser] = useState(null)
+  const [loading, setLoading] = useState(true)
 
-    useEffect(() => {
-        // 1. Connexion anonyme
-        signInAnonymously(auth)
-        // 2. Mise à jour du user
-        const unsub = onAuthStateChanged(auth, u => {
-            console.log("User signed in:", u);
-            setUser(u);
-        });
-        return unsub
-    }, [])
+  useEffect(() => {
+    // Lancer la connexion anonyme à chaque chargement
+    signInAnonymously(auth)
+      .catch(console.error)
+      .finally(() => {
+        // Même si l’appel échoue, on poursuit pour capter onAuthStateChanged
+        setLoading(false)
+      })
 
-    // 3. Tant que user n’existe pas, on affiche “Connexion…”
-    if (!user) return <div>Connexion…</div>
+    // Puis on attend le callback de l’auth
+    const unsubscribe = onAuthStateChanged(auth, u => {
+      setUser(u)
+      setLoading(false)
+    })
 
-    // 4. Sinon on fournit le user (UID) aux enfants
-    return (
-        <FamilyCtx.Provider value={user}>
-            {children}
-        </FamilyCtx.Provider>
-    )
+    return unsubscribe
+  }, [])
+
+  if (loading) {
+    return <div>🔄 Chargement…</div>
+  }
+
+  return (
+    <FamilyCtx.Provider value={user}>
+      {children}
+    </FamilyCtx.Provider>
+  )
 }
