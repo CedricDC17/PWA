@@ -1,7 +1,11 @@
 // src/firebase.js
 import { initializeApp } from 'firebase/app'
 import { getFirestore, enableIndexedDbPersistence } from 'firebase/firestore'
-import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth'
+import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
+
+
+
+
 
 const firebaseConfig = {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -25,7 +29,18 @@ console.log(
 const app = initializeApp(firebaseConfig)
 
 // 2. Exporte l’auth et la DB
-export const auth = getAuth(app)
+export const auth = getAuth(app);
+
+// Force l’anonymous sign‑in
+signInAnonymously(auth).catch(err => {
+    console.error("Impossible de s'authentifier anonymement :", err);
+});
+
+// Juste pour debug
+onAuthStateChanged(auth, user => {
+    console.log("Utilisateur Firebase connecté :", user?.uid);
+});
+
 export const db = getFirestore(app)
 
 // 3. Active le cache offline

@@ -1,30 +1,49 @@
 // src/ShoppingList.jsx
 import { useEffect, useState, useRef } from 'react'
 import {
-  collection, onSnapshot,
-  addDoc, updateDoc, deleteDoc, doc, query, orderBy
+  collection, query, orderBy,
+  onSnapshot, addDoc, updateDoc, deleteDoc, doc
 } from 'firebase/firestore'
-import { db } from './firebase'
+import { signInAnonymously, onAuthStateChanged } from 'firebase/auth'
+import { db, auth } from './firebase'    // IMPORT de auth
 
 export default function ShoppingList() {
-  const user = { uid: 'sharedFamily' }
-  const col = collection(db, 'families', user.uid, 'shoppingItems')
-
+  const INPUT_ID = 'sharedFamily'
   const [items, setItems] = useState([])
   const [newName, setNewName] = useState('')
   const [newQty, setNewQty] = useState(1)
   const nameInputRef = useRef(null)
 
   useEffect(() => {
-    const q = query(col, orderBy('createdAt'))
-    return onSnapshot(q, snap => {
-      setItems(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+    // 1) on monte l’auth anonyme
+    signInAnonymously(auth).catch(err =>
+      console.error("Auth anonyme impossible :", err)
+    )
+
+    let unsubscribeSnapshot = null
+    // 2) dès que l’utilisateur est authentifié, on subscribe Firestore
+    const unsubAuth = onAuthStateChanged(auth, user => {
+      if (!user) return
+      const col = collection(db, 'families', INPUT_ID, 'shoppingItems')
+      const q = query(col, orderBy('createdAt'))
+      unsubscribeSnapshot = onSnapshot(
+        q,
+        snap => setItems(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
+        err => console.error("Erreur snapshot :", err)
+      )
     })
+
+    // 3) cleanup
+    return () => {
+      unsubAuth()
+      unsubscribeSnapshot?.()
+    }
   }, [])
 
   const addItem = async () => {
     const name = newName.trim()
     if (!name) return
+    const col = collection(db, 'families', INPUT_ID, 'shoppingItems')
     await addDoc(col, {
       name,
       quantity: newQty,
@@ -42,17 +61,20 @@ export default function ShoppingList() {
   }
 
   const toggle = item =>
-    updateDoc(doc(col, item.id), { checked: !item.checked })
+    updateDoc(
+      doc(db, 'families', INPUT_ID, 'shoppingItems', item.id),
+      { checked: !item.checked }
+    )
 
   const clearSelected = async () => {
-    for (const i of items.filter(i => i.checked)) {
-      await deleteDoc(doc(col, i.id))
-    }
+    const colPath = (id) => doc(db, 'families', INPUT_ID, 'shoppingItems', id)
+    const toDelete = items.filter(i => i.checked)
+    await Promise.all(toDelete.map(i => deleteDoc(colPath(i.id))))
   }
+
   const clearAll = async () => {
-    for (const i of items) {
-      await deleteDoc(doc(col, i.id))
-    }
+    const colPath = (id) => doc(db, 'families', INPUT_ID, 'shoppingItems', id)
+    await Promise.all(items.map(i => deleteDoc(colPath(i.id))))
   }
 
   return (
