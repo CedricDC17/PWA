@@ -8,17 +8,17 @@ import { db } from './firebase'
 
 export default function ShoppingList() {
   const user = { uid: 'sharedFamily' }
-  const col  = collection(db, 'families', user.uid, 'shoppingItems')
+  const col = collection(db, 'families', user.uid, 'shoppingItems')
 
-  const [items, setItems]     = useState([])
+  const [items, setItems] = useState([])
   const [newName, setNewName] = useState('')
-  const [newQty, setNewQty]   = useState(1)
+  const [newQty, setNewQty] = useState(1)
   const nameInputRef = useRef(null)
 
   useEffect(() => {
     const q = query(col, orderBy('createdAt'))
     return onSnapshot(q, snap => {
-      setItems(snap.docs.map(d => ({ id:d.id, ...d.data() })))
+      setItems(snap.docs.map(d => ({ id: d.id, ...d.data() })))
     })
   }, [])
 
