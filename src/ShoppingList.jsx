@@ -160,7 +160,7 @@ export default function ShoppingList() {
       {/* 4) Frequent Section */}
       <section className="frequent-section">
         <div className="frequent-header">
-          <h3>Produits fréquents</h3>
+          <h3>Anciens produits</h3>
           <button onClick={() => setEditingFrequent(f => !f)}>
             {editingFrequent ? 'Terminé' : 'Modifier'}
           </button>
