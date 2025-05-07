@@ -40,10 +40,7 @@ export default function App() {
 
       <main>
         {page === 'shopping' && (
-          <section className="shopping-container">
-            <h2>🛒 Liste de courses</h2>
             <ShoppingList />
-          </section>
         )}
 
         {page === 'meal' && (

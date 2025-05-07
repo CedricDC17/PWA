@@ -1,132 +1,205 @@
-// src/ShoppingList.jsx
 import { useEffect, useState, useRef } from 'react'
 import {
-  collection, query, orderBy,
-  onSnapshot, addDoc, updateDoc, deleteDoc, doc
+  collection,
+  query,
+  orderBy,
+  onSnapshot,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc
 } from 'firebase/firestore'
 import { signInAnonymously, onAuthStateChanged } from 'firebase/auth'
-import { db, auth } from './firebase'    // IMPORT de auth
+import { db, auth } from './firebase'
+import './ShoppingList.css'
 
 export default function ShoppingList() {
-  const INPUT_ID = 'sharedFamily'
+  const FAMILY_ID = 'sharedFamily'
   const [items, setItems] = useState([])
-  const [newName, setNewName] = useState('')
-  const [newQty, setNewQty] = useState(1)
-  const nameInputRef = useRef(null)
+  const [newItemName, setNewItemName] = useState('')
+  const [editingFrequent, setEditingFrequent] = useState(false)
+  const inputRef = useRef(null)
 
+  // Anonymous auth + listen to Firestore
   useEffect(() => {
-    // 1) on monte l’auth anonyme
-    signInAnonymously(auth).catch(err =>
-      console.error("Auth anonyme impossible :", err)
-    )
-
-    let unsubscribeSnapshot = null
-    // 2) dès que l’utilisateur est authentifié, on subscribe Firestore
+    signInAnonymously(auth).catch(console.error)
+    let unsubSnapshot
     const unsubAuth = onAuthStateChanged(auth, user => {
       if (!user) return
-      const col = collection(db, 'families', INPUT_ID, 'shoppingItems')
+      const col = collection(db, 'families', FAMILY_ID, 'shoppingItems')
       const q = query(col, orderBy('createdAt'))
-      unsubscribeSnapshot = onSnapshot(
+      unsubSnapshot = onSnapshot(
         q,
         snap => setItems(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
-        err => console.error("Erreur snapshot :", err)
+        console.error
       )
     })
-
-    // 3) cleanup
     return () => {
       unsubAuth()
-      unsubscribeSnapshot?.()
+      unsubSnapshot?.()
     }
   }, [])
 
-  const addItem = async () => {
-    const name = newName.trim()
-    if (!name) return
-    const col = collection(db, 'families', INPUT_ID, 'shoppingItems')
-    await addDoc(col, {
-      name,
-      quantity: newQty,
-      checked: false,
-      createdAt: Date.now()
-    })
-    setNewName('')
-    setNewQty(1)
-    nameInputRef.current?.focus()
-  }
+  // Categorize items
+  const purchased = items
+    .filter(i => i.checked)
+    .sort((a, b) =>
+      a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' })
+    )
+  const notPurchased = items
+    .filter(i => !i.checked)
+    .sort((a, b) =>
+      a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' })
+    )
+  const favorites = notPurchased.filter(i => i.favored)
+  const frequents = notPurchased.filter(i => !i.favored)
 
-  const handleSubmit = e => {
+  // Add item (no quantity)
+  const addItem = async () => {
+    const name = newItemName.trim()
+    if (!name) return
+    await addDoc(
+      collection(db, 'families', FAMILY_ID, 'shoppingItems'),
+      {
+        name,
+        checked: false,
+        favored: false,
+        createdAt: Date.now()
+      }
+    )
+    setNewItemName('')
+    inputRef.current?.focus()
+  }
+  const onSubmit = e => {
     e.preventDefault()
     addItem()
   }
 
-  const toggle = item =>
+  // Toggle bought
+  const toggleChecked = item =>
     updateDoc(
-      doc(db, 'families', INPUT_ID, 'shoppingItems', item.id),
+      doc(db, 'families', FAMILY_ID, 'shoppingItems', item.id),
       { checked: !item.checked }
     )
 
-  const clearSelected = async () => {
-    const colPath = (id) => doc(db, 'families', INPUT_ID, 'shoppingItems', id)
-    const toDelete = items.filter(i => i.checked)
-    await Promise.all(toDelete.map(i => deleteDoc(colPath(i.id))))
-  }
+  // Remove from favorites
+  const removeFavorite = item =>
+    updateDoc(
+      doc(db, 'families', FAMILY_ID, 'shoppingItems', item.id),
+      { favored: false }
+    )
 
-  const clearAll = async () => {
-    const colPath = (id) => doc(db, 'families', INPUT_ID, 'shoppingItems', id)
-    await Promise.all(items.map(i => deleteDoc(colPath(i.id))))
-  }
+  // Toggle favorite
+  const toggleFavored = item =>
+    updateDoc(
+      doc(db, 'families', FAMILY_ID, 'shoppingItems', item.id),
+      { favored: !item.favored }
+    )
+
+  // Delete item
+  const removeItem = item =>
+    deleteDoc(doc(db, 'families', FAMILY_ID, 'shoppingItems', item.id))
 
   return (
-    <>
-      <ul className="shopping-items">
-        {items.map(i => (
-          <li key={i.id}>
-            <label>
-              <input
-                type="checkbox"
-                checked={i.checked}
-                onChange={() => toggle(i)}
-              />
-              <span className={i.checked ? 'checked' : ''}>
-                {i.name} × {i.quantity}
-              </span>
-            </label>
-            <button onClick={() => deleteDoc(doc(col, i.id))}>
-              🗑️
-            </button>
+    <div className="shopping-container">
+      <h2>Liste de courses</h2>
+
+      {/* 1) Purchased Items */}
+      <ul className="shopping-list">
+        {purchased.map(item => (
+          <li
+            key={item.id}
+            className="shopping-card"
+            onClick={() => toggleChecked(item)}
+          >
+            <span>{item.name}</span>
+            <input type="checkbox" checked readOnly />
           </li>
         ))}
       </ul>
 
-      {/* On transforme en form pour capter Enter sur mobile */}
-      <form onSubmit={handleSubmit} className="shopping-form">
+      {/* 2) Add-Item Form */}
+      <form className="shopping-form" onSubmit={onSubmit}>
         <input
-          ref={nameInputRef}
+          ref={inputRef}
           type="text"
-          value={newName}
-          onChange={e => setNewName(e.target.value)}
-          placeholder="Ajouter un article…"
+          value={newItemName}
+          onChange={e => setNewItemName(e.target.value)}
+          placeholder="Nom de l’article"
         />
-        <select
-          value={newQty}
-          onChange={e => setNewQty(+e.target.value)}
-        >
-          {[...Array(20)].map((_, i) =>
-            <option key={i} value={i + 1}>{i + 1}</option>
-          )}
-        </select>
-        <button type="submit">➕</button>
+        <button type="submit">Ajouter</button>
       </form>
 
-      <div className="shopping-actions">
-        <button onClick={clearSelected}>
-          Effacer sélectionnés
-        </button>
-        <button onClick={clearAll}>
-          Effacer la liste
-        </button>
-      </div>
-    </>
+      {/* 3) Favorites Section */}
+      <section className="favorite-section">
+        <h3>Produits favoris</h3>
+        {favorites.length === 0 && <p className="empty">Aucun favori</p>}
+        <div className="favorite-list">
+          {favorites.map(item => (
+            <div key={item.id} className="freq-card">
+              <span onClick={() => !editingFrequent && toggleChecked(item)}>
+                {item.name}
+              </span>
+              {editingFrequent && (
+                <button
+                  className="btn-remove-fav"
+                  onClick={e => {
+                    e.stopPropagation()
+                    removeFavorite(item)
+                  }}
+                  title="Retirer des favoris"
+                >
+                  ✖
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* 4) Frequent Section */}
+      <section className="frequent-section">
+        <div className="frequent-header">
+          <h3>Produits fréquents</h3>
+          <button onClick={() => setEditingFrequent(f => !f)}>
+            {editingFrequent ? 'Terminé' : 'Modifier'}
+          </button>
+        </div>
+        {frequents.length === 0 && <p className="empty">Aucun produit</p>}
+        <div className="frequent-list">
+          {frequents.map(item => (
+            <div key={item.id} className="freq-card">
+              <span
+                className="freq-name"
+                onClick={() => !editingFrequent && toggleChecked(item)}
+              >
+                {item.name}
+              </span>
+              {editingFrequent && (
+                <div className="freq-actions">
+                  <button
+                    className={item.favored ? 'favored' : ''}
+                    onClick={e => {
+                      e.stopPropagation()
+                      toggleFavored(item)
+                    }}
+                  >
+                    ♥
+                  </button>
+                  <button
+                    onClick={e => {
+                      e.stopPropagation()
+                      removeItem(item)
+                    }}
+                  >
+                    ✖
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
   )
 }
