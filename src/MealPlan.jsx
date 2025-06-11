@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { doc, onSnapshot, setDoc, deleteDoc } from 'firebase/firestore';
 import { db } from './firebase';
 import { format } from 'date-fns';
+import MealHistory from './MealHistory';
 
 export default function MealPlan() {
   const user = { uid: 'sharedFamily' };
@@ -50,6 +51,7 @@ export default function MealPlan() {
       <button className="clear-plan-btn" onClick={clearPlan}>
         Effacer le planning
       </button>
+      <MealHistory />
     </>
   );
 }
