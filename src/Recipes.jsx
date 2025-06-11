@@ -155,7 +155,13 @@ export default function Recipes() {
           recipe.ingredients.push({ quantity: '', name: cleaned })
         }
       } else if (section === 'steps') {
-        recipe.steps.push(line.replace(/^[-\d.)\s]+/, ''))
+        const marker = line.match(/^\s*(?:[-*]|\d+[.)])\s*/)
+        const cleaned = line.replace(/^[-\d.)\s]+/, '')
+        if (marker || recipe.steps.length === 0) {
+          recipe.steps.push(cleaned)
+        } else {
+          recipe.steps[recipe.steps.length - 1] += `\n${cleaned}`
+        }
       } else if (section === 'notes') {
         recipe.notes += (recipe.notes ? '\n' : '') + line
       }
