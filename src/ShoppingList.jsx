@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useContext } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import {
   collection,
   query,
@@ -11,11 +11,10 @@ import {
 } from 'firebase/firestore'
 import { signInAnonymously, onAuthStateChanged } from 'firebase/auth'
 import { db, auth } from './firebase'
-import { FamilyCtx } from './FamilyContext'
 import './ShoppingList.css'
 
 export default function ShoppingList() {
-  const { familyId } = useContext(FamilyCtx)
+  const FAMILY_ID = 'sharedFamily'
   const [items, setItems] = useState([])
   const [newItemName, setNewItemName] = useState('')
   const [editingFrequent, setEditingFrequent] = useState(false)
@@ -27,7 +26,7 @@ export default function ShoppingList() {
     let unsubSnapshot
     const unsubAuth = onAuthStateChanged(auth, user => {
       if (!user) return
-      const col = collection(db, 'families', familyId, 'shoppingItems')
+      const col = collection(db, 'families', FAMILY_ID, 'shoppingItems')
       const q = query(col, orderBy('createdAt'))
       unsubSnapshot = onSnapshot(
         q,
@@ -39,7 +38,7 @@ export default function ShoppingList() {
       unsubAuth()
       unsubSnapshot?.()
     }
-  }, [familyId])
+  }, [])
 
   // Categorize items
   const purchased = items
@@ -60,7 +59,7 @@ export default function ShoppingList() {
     const name = newItemName.trim()
     if (!name) return
     await addDoc(
-      collection(db, 'families', familyId, 'shoppingItems'),
+      collection(db, 'families', FAMILY_ID, 'shoppingItems'),
       {
         name,
         checked: false,
@@ -79,27 +78,27 @@ export default function ShoppingList() {
   // Toggle bought
   const toggleChecked = item =>
     updateDoc(
-      doc(db, 'families', familyId, 'shoppingItems', item.id),
+      doc(db, 'families', FAMILY_ID, 'shoppingItems', item.id),
       { checked: !item.checked }
     )
 
   // Remove from favorites
   const removeFavorite = item =>
     updateDoc(
-      doc(db, 'families', familyId, 'shoppingItems', item.id),
+      doc(db, 'families', FAMILY_ID, 'shoppingItems', item.id),
       { favored: false }
     )
 
   // Toggle favorite
   const toggleFavored = item =>
     updateDoc(
-      doc(db, 'families', familyId, 'shoppingItems', item.id),
+      doc(db, 'families', FAMILY_ID, 'shoppingItems', item.id),
       { favored: !item.favored }
     )
 
   // Delete item
   const removeItem = item =>
-    deleteDoc(doc(db, 'families', familyId, 'shoppingItems', item.id))
+    deleteDoc(doc(db, 'families', FAMILY_ID, 'shoppingItems', item.id))
 
   return (
     <div className="shopping-container">

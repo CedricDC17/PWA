@@ -1,12 +1,11 @@
-import { useEffect, useState, useContext } from 'react';
+import { useEffect, useState } from 'react';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from './firebase';
 import { format } from 'date-fns';
-import { FamilyCtx } from './FamilyContext';
 
 export default function MealHistory() {
-  const { familyId } = useContext(FamilyCtx);
-  const plansRef = collection(db, 'families', familyId, 'mealPlans');
+  const user = { uid: 'sharedFamily' };
+  const plansRef = collection(db, 'families', user.uid, 'mealPlans');
 
   const [weeks, setWeeks] = useState([]);
   useEffect(() =>

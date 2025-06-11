@@ -1,17 +1,16 @@
 // src/App.jsx
-import { useState, useContext } from 'react'
+import { useState } from 'react'
 import './App.css'
-import { FamilyProvider, FamilyCtx } from './FamilyContext'
+import { FamilyProvider } from './FamilyContext'
 import ShoppingList from './ShoppingList'
 import MealPlan from './MealPlan'
 import Recipes from './Recipes'
 
-function AppContent() {
-  const { logout } = useContext(FamilyCtx)
-  const [page, setPage] = useState('shopping')
+export default function App() {
+  const [page, setPage] = useState('shopping') // 'shopping' | 'meal' | 'recipes'
 
   return (
-    <>
+    <FamilyProvider>
       {/* Barre de navigation */}
       <div className="navbar-wrapper">
         <nav className="navbar">
@@ -36,7 +35,6 @@ function AppContent() {
           >
             📒 Recettes
           </a>
-          <button className="btn-small" onClick={logout}>Déconnexion</button>
         </nav>
       </div>
 
@@ -58,14 +56,6 @@ function AppContent() {
           </section>
         )}
       </main>
-    </>
-  )
-}
-
-export default function App() {
-  return (
-    <FamilyProvider>
-      <AppContent />
     </FamilyProvider>
   )
 }
