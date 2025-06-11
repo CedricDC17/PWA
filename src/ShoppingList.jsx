@@ -62,7 +62,9 @@ export default function ShoppingList() {
       collection(db, 'families', FAMILY_ID, 'shoppingItems'),
       {
         name,
-        checked: false,
+        // Ajoute directement l'élément à la liste active
+        // au lieu de l'envoyer dans les cartes d'anciens produits
+        checked: true,
         favored: false,
         createdAt: Date.now()
       }
