@@ -162,6 +162,10 @@ main {
   background: #333;
 }
 
+.meal-table td.dragover {
+  background: #555;
+}
+
 .meal-table td button {
   position: absolute;
   top: 4px;
