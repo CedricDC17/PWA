@@ -22,10 +22,19 @@ export default function MealHistory() {
 
   const history = weeks.filter(w => w.id !== currentWeek);
 
-  if (history.length === 0) {
+  // Récupère la liste unique des plats précédemment planifiés
+  const pastDishes = Array.from(
+    new Set(
+      history.flatMap(week =>
+        days.flatMap(d => times.map(t => week[d]?.[t]).filter(Boolean))
+      )
+    )
+  ).sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
+
+  if (pastDishes.length === 0) {
     return (
       <section className="meal-history">
-        <h3>Historique des repas</h3>
+        <h3>Plats précédents</h3>
         <p>Aucun historique.</p>
       </section>
     );
@@ -33,32 +42,12 @@ export default function MealHistory() {
 
   return (
     <section className="meal-history">
-      <h3>Historique des repas</h3>
-      {history.map(week => (
-        <details key={week.id} className="history-week">
-          <summary>Semaine {week.id}</summary>
-          <table className="meal-table">
-            <thead>
-              <tr>
-                <th>Jour</th>
-                {times.map(t => <th key={t}>{t}</th>)}
-              </tr>
-            </thead>
-            <tbody>
-              {days.map(day => (
-                <tr key={day}>
-                  <td>{day}</td>
-                  {times.map(t => (
-                    <td key={t}>
-                      <span>{week[day]?.[t] || '—'}</span>
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </details>
-      ))}
+      <h3>Plats précédents</h3>
+      <div className="ideas-list">
+        {pastDishes.map(dish => (
+          <div key={dish} className="dish-card">{dish}</div>
+        ))}
+      </div>
     </section>
   );
 }
