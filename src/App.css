@@ -201,6 +201,7 @@ main {
 }
 
 .dish-card {
+  position: relative;
   background: #2A2A2A;
   padding: 0.5rem 0.75rem;
   border-radius: 4px;
@@ -210,6 +211,31 @@ main {
 
 .dish-card:hover {
   background: #333;
+}
+
+.ideas-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.btn-remove-dish {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: #F44336;
+  border: none;
+  color: #fff;
+  padding: 0 0.3rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.btn-remove-dish:hover {
+  background: #d32f2f;
 }
 
 .history-week {
