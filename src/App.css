@@ -295,6 +295,14 @@ main {
   hyphens: auto;
 }
 
+.card-thumb {
+  width: 100%;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+}
+
 .card-title {
   font-size: 1.1rem;
   font-weight: 600;
@@ -369,6 +377,14 @@ main {
   border: 1px solid #333;
   border-radius: 4px;
   color: #EEE;
+}
+
+.overlay-image {
+  width: 100%;
+  max-height: 200px;
+  object-fit: cover;
+  border-radius: 6px;
+  margin-bottom: 1rem;
 }
 
 /* ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
@@ -520,4 +536,15 @@ main {
   border-radius: 4px;
   cursor: pointer;
   font-size: 1rem;
+}
+
+.btn-remove-img {
+  background: #F44336;
+  color: #fff;
+  padding: 0.3rem 0.6rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
 }
