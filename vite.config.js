@@ -14,6 +14,21 @@ export default defineConfig({
       devOptions: {
         enabled: isDev
       },
+      workbox: {
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/firebasestorage\.googleapis\.com\/.*$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'firebase-images',
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 60 * 60 * 24 * 30 // 30 days
+              }
+            }
+          }
+        ]
+      },
       manifest: {
         name: 'Ma PWA Test',
         short_name: 'TestPWA',
