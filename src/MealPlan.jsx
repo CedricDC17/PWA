@@ -26,6 +26,20 @@ export default function MealPlan() {
   };
   const clearPlan = ()=> setDoc(planRef, {});
 
+  const allowDrop = e => e.preventDefault();
+  const highlight = e => e.currentTarget.classList.add('dragover');
+  const unhighlight = e => e.currentTarget.classList.remove('dragover');
+  const onDrop = async (day, time, e) => {
+    e.preventDefault();
+    unhighlight(e);
+    const dish = e.dataTransfer.getData('text/plain');
+    if (!dish) return;
+    await setDoc(planRef, {
+      ...plan,
+      [day]: { ...plan[day], [time]: dish }
+    });
+  };
+
   return (
     <>
       <table className="meal-table">
@@ -40,7 +54,14 @@ export default function MealPlan() {
             <tr key={day}>
               <td>{day}</td>
               {times.map(t=>(
-                <td key={t} onClick={()=>edit(day,t)}>
+                <td
+                  key={t}
+                  onClick={()=>edit(day,t)}
+                  onDragOver={allowDrop}
+                  onDragEnter={highlight}
+                  onDragLeave={unhighlight}
+                  onDrop={e => onDrop(day, t, e)}
+                >
                   <span>{plan[day]?.[t]||'—'}</span>
                 </td>
               ))}

@@ -45,7 +45,16 @@ export default function MealHistory() {
       <h3>Plats précédents</h3>
       <div className="ideas-list">
         {pastDishes.map(dish => (
-          <div key={dish} className="dish-card">{dish}</div>
+          <div
+            key={dish}
+            className="dish-card"
+            draggable
+            onDragStart={e => {
+              e.dataTransfer.setData('text/plain', dish)
+            }}
+          >
+            {dish}
+          </div>
         ))}
       </div>
     </section>
