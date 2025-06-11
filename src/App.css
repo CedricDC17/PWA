@@ -184,6 +184,21 @@ main {
   font-weight: 500;
 }
 
+/* Historical meal tables */
+.meal-history {
+  margin-top: 1rem;
+}
+
+.history-week {
+  margin-bottom: 1rem;
+}
+
+.history-week summary {
+  cursor: pointer;
+  padding: 0.25rem 0;
+  font-weight: 600;
+}
+
 /* ==================================================
      5) RECIPES / CARDS
      ================================================== */
