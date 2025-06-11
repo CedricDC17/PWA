@@ -1,27 +1,13 @@
 // src/FamilyContext.jsx
 import { createContext, useEffect, useState } from 'react'
-import { signInAnonymously, onAuthStateChanged } from 'firebase/auth'
-import {
-  collection,
-  doc,
-  getDocs,
-  setDoc
-} from 'firebase/firestore'
-import { auth, db } from './firebase'
+import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth'
+import { auth } from './firebase'  // votre getAuth(app)
 
-const DEFAULT_FAMILY_ID = 'sharedFamily'
-
-export const FamilyCtx = createContext({
-  user: null,
-  familyId: null,
-  logout: () => {}
-})
+export const FamilyCtx = createContext(null)
 
 export function FamilyProvider({ children }) {
   const [user, setUser] = useState(null)
-  const [familyId, setFamilyId] = useState(() => localStorage.getItem('familyId') || '')
   const [loading, setLoading] = useState(true)
-  const [draft, setDraft] = useState('')
 
   useEffect(() => {
     // Lancer la connexion anonyme à chaque chargement
@@ -45,62 +31,8 @@ export function FamilyProvider({ children }) {
     return <div>🔄 Chargement…</div>
   }
 
-  const login = id => {
-    const value = id.trim()
-    if (!value) return
-    localStorage.setItem('familyId', value)
-    setFamilyId(value)
-  }
-
-  const createFamily = async id => {
-    const value = id.trim()
-    if (!value) return
-    const subCols = ['shoppingItems', 'mealPlans', 'recipes']
-    for (const sub of subCols) {
-      const snap = await getDocs(collection(db, 'families', DEFAULT_FAMILY_ID, sub))
-      await Promise.all(
-        snap.docs.map(docSnap =>
-          setDoc(doc(db, 'families', value, sub, docSnap.id), docSnap.data())
-        )
-      )
-    }
-    localStorage.setItem('familyId', value)
-    setFamilyId(value)
-  }
-
-  const logout = () => {
-    localStorage.removeItem('familyId')
-    setFamilyId('')
-  }
-
-  if (!familyId) {
-    return (
-      <div className="login-screen">
-        <form onSubmit={e => { e.preventDefault(); login(draft) }}>
-          <h2>Connexion famille</h2>
-          <input
-            type="text"
-            placeholder="Identifiant famille"
-            value={draft}
-            onChange={e => setDraft(e.target.value)}
-          />
-          <button type="submit">Entrer</button>
-          <button
-            type="button"
-            onClick={() => {
-              const id = prompt('Nouvel identifiant famille ?')
-              if (id) createFamily(id)
-            }}
-          >
-            Créer une famille
-          </button>
-        </form>
-      </div>
-    )
-  }
-
   return (
-    <FamilyCtx.Provider value={{ user, familyId, logout }}>
+    <FamilyCtx.Provider value={user}>
       {children}
     </FamilyCtx.Provider>
   )
