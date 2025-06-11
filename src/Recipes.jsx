@@ -25,6 +25,8 @@ export default function Recipes() {
   const [draftIngredients, setDraftIngredients] = useState([])
   const [draftSteps, setDraftSteps]   = useState([])
   const [draftNotes, setDraftNotes]   = useState('')
+  const [pasteMode, setPasteMode]     = useState(false)
+  const [pasteText, setPasteText]     = useState('')
 
   // real‑time load
   useEffect(() => {
@@ -119,6 +121,62 @@ export default function Recipes() {
   const removeStep = i =>
     setDraftSteps(arr => arr.filter((_, idx) => idx !== i))
 
+  function parseRecipe(text) {
+    const lines = text.split(/\r?\n/).map(l => l.trimEnd())
+    const recipe = { title: '', ingredients: [], steps: [], notes: '' }
+    if (!lines.length) return recipe
+
+    recipe.title = lines.shift().trim()
+    let section = 'ingredients'
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim()
+      if (!line) {
+        if (section === 'ingredients' && recipe.ingredients.length) section = 'steps'
+        continue
+      }
+
+      const lc = line.toLowerCase().replace(/[:\s]+$/, '')
+      if (/^ingr[eé]dients?/.test(lc)) { section = 'ingredients'; continue }
+      if (/^(préparation|preparation|étapes?|etapes?|steps?)/.test(lc)) { section = 'steps'; continue }
+      if (/^notes?/.test(lc)) { section = 'notes'; continue }
+
+      if (section === 'ingredients') {
+        if (/^\d+[.)]/.test(lc)) {
+          section = 'steps'
+          recipe.steps.push(line.replace(/^\d+[.)]\s*/, ''))
+          continue
+        }
+        const cleaned = line.replace(/^[-*]\s*/, '')
+        const parts = cleaned.split(/\s+/)
+        if (/^\d/.test(parts[0])) {
+          const qty = parts.shift()
+          recipe.ingredients.push({ quantity: qty, name: parts.join(' ') })
+        } else {
+          recipe.ingredients.push({ quantity: '', name: cleaned })
+        }
+      } else if (section === 'steps') {
+        recipe.steps.push(line.replace(/^[-\d.)\s]+/, ''))
+      } else if (section === 'notes') {
+        recipe.notes += (recipe.notes ? '\n' : '') + line
+      }
+    }
+    return recipe
+  }
+
+  function openPasteOverlay() {
+    setPasteText('')
+    setPasteMode(true)
+  }
+
+  async function importFromText() {
+    const rec = parseRecipe(pasteText)
+    if (!rec.title) { alert('Titre manquant'); return }
+    const docRef = await addDoc(colRef, rec)
+    setPasteMode(false)
+    setPasteText('')
+    setSelected({ id: docRef.id, ...rec })
+  }
+
   return (
     <div className="card-container">
       {/* header with search + add */}
@@ -132,6 +190,7 @@ export default function Recipes() {
           onChange={e => setSearchTerm(e.target.value)}
         />
         <button className="btn-add" onClick={addRecipe}>➕</button>
+        <button className="btn-add" onClick={openPasteOverlay}>📋</button>
       </div>
 
       {/* cards grid */}
@@ -255,6 +314,29 @@ export default function Recipes() {
                   🗑️ Supprimer
                 </button>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {pasteMode && (
+        <div
+          className="overlay"
+          onClick={e => {
+            if (e.target === e.currentTarget) setPasteMode(false)
+          }}
+        >
+          <div className="overlay-content" onClick={e => e.stopPropagation()}>
+            <button className="btn-close" onClick={() => setPasteMode(false)}>✖</button>
+            <h2 className="overlay-title">Importer une recette</h2>
+            <textarea
+              className="overlay-textarea"
+              value={pasteText}
+              onChange={e => setPasteText(e.target.value)}
+              placeholder={`Titre\nIngrédients:\n- 2 œufs\nPréparation:\n- Étape…\nNotes:`}
+            />
+            <div className="overlay-footer">
+              <button className="btn-save" onClick={importFromText}>💾 Importer</button>
             </div>
           </div>
         </div>
