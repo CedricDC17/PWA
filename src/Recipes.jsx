@@ -129,14 +129,11 @@ export default function Recipes() {
     recipe.title = lines.shift().trim()
     let section = 'ingredients'
     for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim()
-      if (!line) {
-        if (section === 'ingredients' && recipe.ingredients.length) section = 'steps'
-        continue
-      }
+        const line = lines[i].trim()
+        if (!line) continue
+        const lc = line.toLowerCase().replace(/[:\s]+$/, "")
+        if (/^ingr[eé]dients?/.test(lc)) { section = 'ingredients'; continue }
 
-      const lc = line.toLowerCase().replace(/[:\s]+$/, '')
-      if (/^ingr[eé]dients?/.test(lc)) { section = 'ingredients'; continue }
       if (/^(préparation|preparation|étapes?|etapes?|steps?)/.test(lc)) { section = 'steps'; continue }
       if (/^notes?/.test(lc)) { section = 'notes'; continue }
 
