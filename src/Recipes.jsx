@@ -87,13 +87,19 @@ export default function Recipes() {
     if (!selected) return
     const ref = doc(db, 'families', FAMILY_ID, 'recipes', selected.id)
     let url = draftImageUrl
-    if (imageFile) {
-      const imgRef = storageRef(storage, `recipes/${selected.id}`)
-      await uploadBytes(imgRef, imageFile)
-      url = await getDownloadURL(imgRef)
-    } else if (!draftImageUrl && selected.imageUrl) {
-      const imgRef = storageRef(storage, `recipes/${selected.id}`)
-      await deleteObject(imgRef).catch(() => {})
+    try {
+      if (imageFile) {
+        const imgRef = storageRef(storage, `recipes/${selected.id}`)
+        await uploadBytes(imgRef, imageFile)
+        url = await getDownloadURL(imgRef)
+        setImageFile(null)
+        setDraftImageUrl(url)
+      } else if (!draftImageUrl && selected.imageUrl) {
+        const imgRef = storageRef(storage, `recipes/${selected.id}`)
+        await deleteObject(imgRef).catch(() => {})
+      }
+    } catch (err) {
+      console.error('Image upload failed:', err)
     }
     await updateDoc(ref, {
       title: draftTitle,
