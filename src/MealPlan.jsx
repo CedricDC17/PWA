@@ -1,14 +1,15 @@
 // src/MealPlan.jsx
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useContext } from 'react';
 import { doc, onSnapshot, setDoc, deleteDoc } from 'firebase/firestore';
 import { db } from './firebase';
 import { format } from 'date-fns';
 import MealHistory from './MealHistory';
+import { FamilyCtx } from './FamilyContext';
 
 export default function MealPlan() {
-  const user = { uid: 'sharedFamily' };
+  const { familyId } = useContext(FamilyCtx);
   const week = format(new Date(), 'yyyy‑II');
-  const planRef = doc(db, 'families', user.uid, 'mealPlans', week);
+  const planRef = doc(db, 'families', familyId, 'mealPlans', week);
   const days = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'];
   const times = ['midi','soir'];
 

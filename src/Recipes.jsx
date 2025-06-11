@@ -1,5 +1,5 @@
 // src/Recipes.jsx
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useContext } from 'react'
 import {
   collection,
   onSnapshot,
@@ -9,12 +9,13 @@ import {
   doc
 } from 'firebase/firestore'
 import { db } from './firebase'
+import { FamilyCtx } from './FamilyContext'
 import './Recipes.css'
 import { query, orderBy } from 'firebase/firestore'
 
 export default function Recipes() {
-  const FAMILY_ID = 'sharedFamily'
-  const colRef = collection(db, 'families', FAMILY_ID, 'recipes')
+  const { familyId } = useContext(FamilyCtx)
+  const colRef = collection(db, 'families', familyId, 'recipes')
   const q      = query(colRef, orderBy('title'))     // tri alphabétique par titre
 
   const [recipes, setRecipes]         = useState([])
@@ -74,7 +75,7 @@ export default function Recipes() {
   // save all edits
   async function saveAll() {
     if (!selected) return
-    const ref = doc(db, 'families', FAMILY_ID, 'recipes', selected.id)
+    const ref = doc(db, 'families', familyId, 'recipes', selected.id)
     await updateDoc(ref, {
       title: draftTitle,
       ingredients: draftIngredients,
@@ -96,7 +97,7 @@ export default function Recipes() {
   async function deleteCurrent() {
     if (!selected) return
     if (confirm('Supprimer cette recette ?')) {
-      await deleteDoc(doc(db, 'families', FAMILY_ID, 'recipes', selected.id))
+      await deleteDoc(doc(db, 'families', familyId, 'recipes', selected.id))
       setSelected(null)
     }
   }
