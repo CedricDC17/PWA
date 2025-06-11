@@ -1,7 +1,8 @@
 // src/firebase.js
 import { initializeApp } from 'firebase/app'
 import { getFirestore, enableIndexedDbPersistence } from 'firebase/firestore'
-import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
+import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth'
+import { getStorage } from 'firebase/storage'
 
 
 
@@ -42,6 +43,7 @@ onAuthStateChanged(auth, user => {
 });
 
 export const db = getFirestore(app)
+export const storage = getStorage(app)
 
 // 3. Active le cache offline
 enableIndexedDbPersistence(db).catch(err => {

@@ -8,7 +8,8 @@ import {
   deleteDoc,
   doc
 } from 'firebase/firestore'
-import { db } from './firebase'
+import { db, storage } from './firebase'
+import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'
 import './Recipes.css'
 import { query, orderBy } from 'firebase/firestore'
 
@@ -25,6 +26,8 @@ export default function Recipes() {
   const [draftIngredients, setDraftIngredients] = useState([])
   const [draftSteps, setDraftSteps]   = useState([])
   const [draftNotes, setDraftNotes]   = useState('')
+  const [draftImageUrl, setDraftImageUrl] = useState('')
+  const [imageFile, setImageFile] = useState(null)
   const [pasteMode, setPasteMode]     = useState(false)
   const [pasteText, setPasteText]     = useState('')
 
@@ -62,24 +65,42 @@ export default function Recipes() {
     )
     setDraftSteps(r.steps || [])
     setDraftNotes(r.notes || '')
+    setDraftImageUrl(r.imageUrl || '')
+    setImageFile(null)
   }
 
   // add new recipe
   async function addRecipe() {
     const title = prompt('Titre de la nouvelle recette ?')
     if (!title) return
-    await addDoc(colRef, { title, ingredients: [], steps: [], notes: '' })
+    await addDoc(colRef, {
+      title,
+      ingredients: [],
+      steps: [],
+      notes: '',
+      imageUrl: ''
+    })
   }
 
   // save all edits
   async function saveAll() {
     if (!selected) return
     const ref = doc(db, 'families', FAMILY_ID, 'recipes', selected.id)
+    let url = draftImageUrl
+    if (imageFile) {
+      const imgRef = storageRef(storage, `recipes/${selected.id}`)
+      await uploadBytes(imgRef, imageFile)
+      url = await getDownloadURL(imgRef)
+    } else if (!draftImageUrl && selected.imageUrl) {
+      const imgRef = storageRef(storage, `recipes/${selected.id}`)
+      await deleteObject(imgRef).catch(() => {})
+    }
     await updateDoc(ref, {
       title: draftTitle,
       ingredients: draftIngredients,
       steps: draftSteps,
-      notes: draftNotes
+      notes: draftNotes,
+      imageUrl: url
     })
     // reflect locally
     setSelected({
@@ -87,7 +108,8 @@ export default function Recipes() {
       title: draftTitle,
       ingredients: draftIngredients,
       steps: draftSteps,
-      notes: draftNotes
+      notes: draftNotes,
+      imageUrl: url
     })
     setEditMode(false)
   }
@@ -97,8 +119,16 @@ export default function Recipes() {
     if (!selected) return
     if (confirm('Supprimer cette recette ?')) {
       await deleteDoc(doc(db, 'families', FAMILY_ID, 'recipes', selected.id))
+      if (selected.imageUrl) {
+        await deleteObject(storageRef(storage, `recipes/${selected.id}`)).catch(() => {})
+      }
       setSelected(null)
     }
+  }
+
+  function removeImage() {
+    setDraftImageUrl('')
+    setImageFile(null)
   }
 
   // ingredient helpers
@@ -121,9 +151,17 @@ export default function Recipes() {
   const removeStep = i =>
     setDraftSteps(arr => arr.filter((_, idx) => idx !== i))
 
+  function onFileChange(e) {
+    const file = e.target.files[0]
+    if (file) {
+      setImageFile(file)
+      setDraftImageUrl(URL.createObjectURL(file))
+    }
+  }
+
   function parseRecipe(text) {
     const lines = text.split(/\r?\n/).map(l => l.trimEnd())
-    const recipe = { title: '', ingredients: [], steps: [], notes: '' }
+    const recipe = { title: '', ingredients: [], steps: [], notes: '', imageUrl: '' }
     if (!lines.length) return recipe
 
     recipe.title = lines.shift().trim()
@@ -174,10 +212,10 @@ export default function Recipes() {
   async function importFromText() {
     const rec = parseRecipe(pasteText)
     if (!rec.title) { alert('Titre manquant'); return }
-    const docRef = await addDoc(colRef, rec)
+    const docRef = await addDoc(colRef, { ...rec, imageUrl: '' })
     setPasteMode(false)
     setPasteText('')
-    setSelected({ id: docRef.id, ...rec })
+    setSelected({ id: docRef.id, ...rec, imageUrl: '' })
   }
 
   return (
@@ -201,6 +239,9 @@ export default function Recipes() {
         {filtered.length === 0 && <p>Aucune recette trouvée.</p>}
         {filtered.map(r => (
           <div key={r.id} className="card" onClick={() => openOverlay(r)}>
+            {r.imageUrl && (
+              <img src={r.imageUrl} alt="" className="card-thumb" />
+            )}
             <h3 className="card-title">{r.title}</h3>
           </div>
         ))}
@@ -227,6 +268,24 @@ export default function Recipes() {
                 />
               : <h2 className="overlay-title">{selected.title}</h2>
             }
+
+            {(editMode ? draftImageUrl : selected.imageUrl) && (
+              <img
+                src={editMode ? draftImageUrl : selected.imageUrl}
+                alt=""
+                className="overlay-image"
+              />
+            )}
+            {editMode && (
+              <div>
+                <input type="file" accept="image/*" onChange={onFileChange} />
+                {draftImageUrl && (
+                  <button className="btn-remove-img" onClick={removeImage}>
+                    Supprimer l'image
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* Ingredients */}
             <section className="section">
