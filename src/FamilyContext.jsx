@@ -1,6 +1,6 @@
 // src/FamilyContext.jsx
 import { createContext, useEffect, useState } from 'react'
-import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth'
+import { signInAnonymously, onAuthStateChanged } from 'firebase/auth'
 import { auth } from './firebase'  // votre getAuth(app)
 
 export const FamilyCtx = createContext(null)
