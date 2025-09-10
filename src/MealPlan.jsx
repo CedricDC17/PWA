@@ -1,9 +1,10 @@
 // src/MealPlan.jsx
 import { useEffect, useState } from 'react';
-import { doc, onSnapshot, setDoc, deleteDoc } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from './firebase';
 import { format } from 'date-fns';
 import MealHistory from './MealHistory';
+import MealEditor from './components/MealEditor';
 
 export default function MealPlan() {
   const user = { uid: 'sharedFamily' };
@@ -15,15 +16,18 @@ export default function MealPlan() {
   const [plan, setPlan] = useState({});
   useEffect(() => onSnapshot(planRef, s=>setPlan(s.data()||{})), []);
 
-  const edit = async (day, time) => {
-    const text = prompt(`Quoi pour ${time} le ${day} ?`, plan[day]?.[time]||'');
-    if (text!=null) {
-      await setDoc(planRef, {
-        ...plan,
-        [day]: { ...plan[day], [time]: text }
-      });
-    }
+  const [editing, setEditing] = useState(null);
+  const startEdit = (day, time) =>
+    setEditing({ day, time, value: plan[day]?.[time] || '' });
+  const submitEdit = async text => {
+    if (!editing) return;
+    await setDoc(planRef, {
+      ...plan,
+      [editing.day]: { ...plan[editing.day], [editing.time]: text }
+    });
+    setEditing(null);
   };
+  const cancelEdit = () => setEditing(null);
   const clearPlan = ()=> setDoc(planRef, {});
 
   const allowDrop = e => e.preventDefault();
@@ -56,7 +60,7 @@ export default function MealPlan() {
               {times.map(t=>(
                 <td
                   key={t}
-                  onClick={()=>edit(day,t)}
+                  onClick={()=>startEdit(day,t)}
                   onDragOver={allowDrop}
                   onDragEnter={highlight}
                   onDragLeave={unhighlight}
@@ -73,6 +77,15 @@ export default function MealPlan() {
         Effacer le planning
       </button>
       <MealHistory />
+      {editing && (
+        <MealEditor
+          day={editing.day}
+          time={editing.time}
+          initialValue={editing.value}
+          onSubmit={submitEdit}
+          onCancel={cancelEdit}
+        />
+      )}
     </>
   );
 }
