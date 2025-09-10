@@ -54,21 +54,33 @@ export default function ShoppingList() {
   const favorites = notPurchased.filter(i => i.favored)
   const frequents = notPurchased.filter(i => !i.favored)
 
+  const existingNames = Array.from(new Set(items.map(i => i.name)))
+
   // Add item (no quantity)
   const addItem = async () => {
     const name = newItemName.trim()
     if (!name) return
-    await addDoc(
-      collection(db, 'families', FAMILY_ID, 'shoppingItems'),
-      {
-        name,
-        // Ajoute directement l'élément à la liste active
-        // au lieu de l'envoyer dans les cartes d'anciens produits
-        checked: true,
-        favored: false,
-        createdAt: Date.now()
-      }
+    const existing = items.find(
+      i => i.name.toLowerCase() === name.toLowerCase()
     )
+    if (existing) {
+      await updateDoc(
+        doc(db, 'families', FAMILY_ID, 'shoppingItems', existing.id),
+        { checked: true }
+      )
+    } else {
+      await addDoc(
+        collection(db, 'families', FAMILY_ID, 'shoppingItems'),
+        {
+          name,
+          // Ajoute directement l'élément à la liste active
+          // au lieu de l'envoyer dans les cartes d'anciens produits
+          checked: true,
+          favored: false,
+          createdAt: Date.now()
+        }
+      )
+    }
     setNewItemName('')
     inputRef.current?.focus()
   }
@@ -124,11 +136,17 @@ export default function ShoppingList() {
       <form className="shopping-form" onSubmit={onSubmit}>
         <input
           ref={inputRef}
+          list="existing-items"
           type="text"
           value={newItemName}
           onChange={e => setNewItemName(e.target.value)}
-          placeholder="Nom de l’article"
+          placeholder="Rechercher ou ajouter un article"
         />
+        <datalist id="existing-items">
+          {existingNames.map(name => (
+            <option key={name} value={name} />
+          ))}
+        </datalist>
         <button type="submit">Ajouter</button>
       </form>
 
