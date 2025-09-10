@@ -166,47 +166,43 @@ export default function Recipes() {
   }
 
   function parseRecipe(text) {
-    const lines = text.split(/\r?\n/).map(l => l.trimEnd())
+    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l)
     const recipe = { title: '', ingredients: [], steps: [], notes: '', imageUrl: '' }
     if (!lines.length) return recipe
 
-    recipe.title = lines.shift().trim()
-    let section = 'ingredients'
-    for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim()
-        if (!line) continue
-        const lc = line.toLowerCase().replace(/[:\s]+$/, "")
-        if (/^ingr[eé]dients?/.test(lc)) { section = 'ingredients'; continue }
-
-      if (/^(préparation|preparation|étapes?|etapes?|steps?)/.test(lc)) { section = 'steps'; continue }
-      if (/^notes?/.test(lc)) { section = 'notes'; continue }
-
-      if (section === 'ingredients') {
-        if (/^\d+[.)]/.test(lc)) {
-          section = 'steps'
-          recipe.steps.push(line.replace(/^\d+[.)]\s*/, ''))
-          continue
-        }
-        const cleaned = line.replace(/^[-*]\s*/, '')
-        const parts = cleaned.split(/\s+/)
-        if (/^\d/.test(parts[0])) {
-          const qty = parts.shift()
-          recipe.ingredients.push({ quantity: qty, name: parts.join(' ') })
-        } else {
-          recipe.ingredients.push({ quantity: '', name: cleaned })
-        }
-      } else if (section === 'steps') {
-        const marker = line.match(/^\s*(?:[-*]|\d+[.)])\s*/)
-        const cleaned = line.replace(/^[-\d.)\s]+/, '')
-        if (marker || recipe.steps.length === 0) {
-          recipe.steps.push(cleaned)
-        } else {
-          recipe.steps[recipe.steps.length - 1] += `\n${cleaned}`
-        }
-      } else if (section === 'notes') {
-        recipe.notes += (recipe.notes ? '\n' : '') + line
-      }
+    const firstLine = lines.shift()
+    const titleMatch = firstLine.match(/^(.*)\s*\(([^)]+)\)\s*$/)
+    if (titleMatch) {
+      recipe.title = titleMatch[1].trim()
+      recipe.notes = titleMatch[2].trim()
+    } else {
+      recipe.title = firstLine.trim()
     }
+
+    const ingIndex = lines.findIndex(l => /^ingr[eé]dients?:?$/i.test(l))
+    const stepIndex = lines.findIndex(l => /^étapes?:?$/i.test(l) || /^etapes?:?$/i.test(l))
+
+    if (ingIndex !== -1) {
+      const ingredientsLine = lines[ingIndex + 1] || ''
+      recipe.ingredients = ingredientsLine
+        .split('·')
+        .map(part => {
+          const item = part.trim()
+          if (!item) return null
+          const m = item.match(/^(\d+(?:[.,]\d+)?(?:\s*\w+)?)(.*)$/)
+          if (m) {
+            return { quantity: m[1].trim(), name: m[2].trim() }
+          }
+          return { quantity: '', name: item }
+        })
+        .filter(Boolean)
+    }
+
+    if (stepIndex !== -1) {
+      const stepLines = lines.slice(stepIndex + 1)
+      recipe.steps = stepLines.filter(Boolean)
+    }
+
     return recipe
   }
 
@@ -323,7 +319,7 @@ export default function Recipes() {
                 : selected.ingredients?.length
                   ? <ul>
                       {selected.ingredients.map((ing,i)=>(
-                        <li key={i}>{ing.quantity} {ing.name}</li>
+                        <li key={i}>{ing.quantity} {ing.name}</li>
                       ))}
                     </ul>
                   : <p>— aucun ingrédient —</p>
@@ -401,7 +397,7 @@ export default function Recipes() {
               className="overlay-textarea"
               value={pasteText}
               onChange={e => setPasteText(e.target.value)}
-              placeholder={`Titre\nIngrédients:\n- 2 œufs\nPréparation:\n- Étape…\nNotes:`}
+              placeholder={`Nom de la recette (X portions)\nINGRÉDIENTS:\nIngrédient 1 · Ingrédient 2\nÉTAPES:\nÉtape 1\nÉtape 2`}
             />
             <div className="overlay-footer">
               <button className="btn-save" onClick={importFromText}>💾 Importer</button>
