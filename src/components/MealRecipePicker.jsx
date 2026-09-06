@@ -74,7 +74,9 @@ export default function MealRecipePicker({ day, time, onSelect, onSelectFree, on
           )}
           {filtered.map(r => (
             <div key={r.id} className="recipe-picker-item" onClick={() => onSelect(r)}>
-              {r.imageUrl && <img src={r.imageUrl} alt="" />}
+              {(r.thumbUrl || r.imageUrl) && (
+                <img src={r.thumbUrl || r.imageUrl} alt="" />
+              )}
               <span>{r.title}</span>
             </div>
           ))}

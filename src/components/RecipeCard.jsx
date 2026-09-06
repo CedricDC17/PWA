@@ -4,11 +4,13 @@ import { CookingPot } from 'lucide-react'
 export default function RecipeCard({ recipe, onSelect }) {
   const tags = recipe.tags || []
   const count = recipe.ingredients?.length || 0
+  // thumbUrl : miniature stockée dans le document. imageUrl : ancien champ Storage.
+  const vignette = recipe.thumbUrl || recipe.imageUrl
 
   return (
     <button className="recipe-card" onClick={() => onSelect(recipe)}>
-      {recipe.imageUrl ? (
-        <img src={recipe.imageUrl} alt="" className="recipe-thumb" />
+      {vignette ? (
+        <img src={vignette} alt="" className="recipe-thumb" />
       ) : (
         <div className="recipe-thumb placeholder" aria-hidden="true">
           <CookingPot size={28} />

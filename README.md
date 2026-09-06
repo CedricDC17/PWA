@@ -131,7 +131,7 @@ L'application est ensuite disponible sur `http://localhost:5173`.
 VITE_FIREBASE_API_KEY=
 VITE_FIREBASE_AUTH_DOMAIN=
 VITE_FIREBASE_PROJECT_ID=
-VITE_FIREBASE_STORAGE_BUCKET=
+VITE_FIREBASE_STORAGE_BUCKET=      # inutilisé : voir « Photos sans Firebase Storage »
 VITE_FIREBASE_MESSAGING_SENDER_ID=
 VITE_FIREBASE_APP_ID=
 ```
@@ -159,7 +159,10 @@ families/sharedFamily/
 │   ├── steps       array     ["Préchauffer le four", …]
 │   ├── tags        array     ["Soir", "Plat"]
 │   ├── notes       string
-│   └── imageUrl    string    Firebase Storage
+│   └── thumbUrl    string    Miniature (data URL, ~5 Ko) pour les cartes
+│
+├── recipePhotos/{idRecette}  Photo complète, document séparé
+│   └── dataUrl     string    Image en base64, chargée à l'ouverture d'une fiche
 │
 ├── mealPlans/{yyyy-semaine}  Planning d'une semaine
 │   └── {Jour}.{midi|soir}    { recipeId, title } ou { title, free: true }
@@ -213,6 +216,8 @@ src/
 **Thème** — Toutes les couleurs sont des variables CSS définies dans `src/index.css`. Changer la palette de l'application entière se fait en modifiant ce seul fichier.
 
 **Ergonomie mobile** — Toutes les cibles tactiles font au minimum 44 px. Les appuis longs passent par les *pointer events*, ce qui couvre souris et tactile sans double déclenchement.
+
+**Photos sans Firebase Storage** — Depuis septembre 2024, provisionner un bucket Cloud Storage impose le plan payant Blaze. Les photos de recettes sont donc redimensionnées à 1200 px, compressées, et enregistrées **dans Firestore** sous forme de data URL. La miniature vit dans le document de la recette (pour les cartes), la photo complète dans un document séparé chargé à la demande — sinon ouvrir la liste téléchargerait toutes les photos. Un plafond de 700 Ko, avec repli automatique sur une qualité inférieure, garantit de rester sous la limite de 1 Mio par document Firestore. Effet de bord agréable : les photos sont consultables hors-ligne, ce qu'une URL Storage ne permet pas.
 
 **Extension possible : import de recettes par IA** — Toute l'analyse d'un texte collé passe par la seule fonction `parseRecipeText()` de `src/utils/parseRecipe.js`. Pour déléguer la compréhension à une IA, il suffit d'y appeler une fonction serverless (dossier `/api` sur Vercel, clé API en variable d'environnement) renvoyant le même objet : aucun composant n'a à changer.
 

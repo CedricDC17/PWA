@@ -1,10 +1,22 @@
 // src/utils/image.js
-// Réduction des photos avant envoi : une photo de téléphone pèse 3 à 8 Mo,
-// ce qui prend des dizaines de secondes en 4G. Redimensionnée, elle tombe
-// à quelques centaines de kilo-octets pour un rendu identique à l'écran.
+//
+// Les photos de recettes sont stockées dans Firestore, pas dans Firebase
+// Storage (dont l'activation exige désormais un plan payant). Une photo est
+// donc convertie en data URL et doit tenir dans un document Firestore, dont la
+// taille maximale est de 1 Mio — d'où la compression et le plafond ci-dessous.
 
-const MAX_SIZE = 1600 // px sur le plus grand côté
-const QUALITY = 0.82
+const MAX_BYTES = 700_000 // marge confortable sous la limite de 1 Mio
+
+// Essais successifs, du plus beau au plus léger : le premier qui tient gagne.
+const ESSAIS = [
+  { taille: 1200, qualite: 0.82 },
+  { taille: 1200, qualite: 0.7 },
+  { taille: 1000, qualite: 0.7 },
+  { taille: 800, qualite: 0.65 },
+  { taille: 640, qualite: 0.6 },
+]
+
+const THUMB = { taille: 220, qualite: 0.7 }
 
 /** Décode le fichier, en retombant sur <img> si createImageBitmap échoue (HEIC…). */
 async function decode(file) {
@@ -29,37 +41,46 @@ async function decode(file) {
   }
 }
 
+function versDataUrl(source, taille, qualite) {
+  const ratio = Math.min(1, taille / Math.max(source.width, source.height))
+  const canvas = document.createElement('canvas')
+  canvas.width = Math.max(1, Math.round(source.width * ratio))
+  canvas.height = Math.max(1, Math.round(source.height * ratio))
+  const ctx = canvas.getContext('2d')
+  ctx.fillStyle = '#fff' // évite un fond noir si l'image d'origine est transparente
+  ctx.fillRect(0, 0, canvas.width, canvas.height)
+  ctx.drawImage(source, 0, 0, canvas.width, canvas.height)
+  return canvas.toDataURL('image/jpeg', qualite)
+}
+
 /**
- * Redimensionne et recompresse une image.
- * En cas d'échec (format exotique, navigateur récalcitrant), renvoie le
- * fichier d'origine : mieux vaut un envoi lent qu'un envoi impossible.
+ * Prépare une photo pour Firestore.
+ * @returns {{ full: string, thumb: string, bytes: number }}
+ *   full  : photo complète, affichée dans la fiche
+ *   thumb : miniature, affichée sur les cartes de la liste
+ * @throws si aucun réglage ne permet de tenir sous la limite
  */
-export async function compressImage(file) {
-  if (!file || !file.type?.startsWith('image/')) return file
-
+export async function preparePhoto(file) {
+  const source = await decode(file)
   try {
-    const source = await decode(file)
-    const w = source.width
-    const h = source.height
-    if (!w || !h) return file
-
-    const ratio = Math.min(1, MAX_SIZE / Math.max(w, h))
-    const canvas = document.createElement('canvas')
-    canvas.width = Math.round(w * ratio)
-    canvas.height = Math.round(h * ratio)
-    canvas.getContext('2d').drawImage(source, 0, 0, canvas.width, canvas.height)
+    let full = null
+    for (const { taille, qualite } of ESSAIS) {
+      const candidat = versDataUrl(source, taille, qualite)
+      if (candidat.length <= MAX_BYTES) {
+        full = candidat
+        break
+      }
+      full = candidat // on garde le dernier au cas où
+    }
+    if (!full || full.length > MAX_BYTES) {
+      throw new Error('photo-trop-lourde')
+    }
+    return {
+      full,
+      thumb: versDataUrl(source, THUMB.taille, THUMB.qualite),
+      bytes: full.length,
+    }
+  } finally {
     source.close?.()
-
-    const blob = await new Promise(resolve =>
-      canvas.toBlob(resolve, 'image/jpeg', QUALITY)
-    )
-    if (!blob) return file
-
-    // Si la compression n'apporte rien (petite image déjà optimisée), on garde l'original
-    if (blob.size >= file.size) return file
-
-    return new File([blob], 'photo.jpg', { type: 'image/jpeg' })
-  } catch {
-    return file
   }
 }

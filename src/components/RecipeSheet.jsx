@@ -1,14 +1,8 @@
 // src/components/RecipeSheet.jsx
 import { useCallback, useEffect, useState } from 'react'
-import { updateDoc, deleteDoc, doc } from 'firebase/firestore'
-import { db, storage } from '../firebase'
-import {
-  ref as storageRef,
-  uploadBytesResumable,
-  getDownloadURL,
-  deleteObject,
-} from 'firebase/storage'
-import { compressImage } from '../utils/image'
+import { updateDoc, deleteDoc, doc, getDoc, setDoc } from 'firebase/firestore'
+import { db } from '../firebase'
+import { preparePhoto } from '../utils/image'
 import {
   ChevronLeft, Pencil, Trash2, ImagePlus, RotateCcw, CookingPot, Check, AlertTriangle,
 } from 'lucide-react'
@@ -22,12 +16,25 @@ import useWakeLock from '../hooks/useWakeLock'
 import useDismissable from '../hooks/useDismissable'
 
 const FAMILY_ID = 'sharedFamily'
-const UPLOAD_TIMEOUT = 45000 // ms avant d'abandonner l'envoi d'une photo
+
+/** Document séparé pour la photo : la liste des recettes ne doit pas la charger. */
+const photoRef = id => doc(db, 'families', FAMILY_ID, 'recipePhotos', id)
+const recipeRef = id => doc(db, 'families', FAMILY_ID, 'recipes', id)
+
+function messageErreurPhoto(err) {
+  if (err?.message === 'photo-trop-lourde') {
+    return "Cette photo est trop lourde même après compression. Essaie une image moins grande. Le reste de la recette a été enregistré."
+  }
+  if (err?.code === 'permission-denied') {
+    return "Les règles de sécurité Firestore refusent l'enregistrement de la photo. Le reste de la recette a été enregistré."
+  }
+  return "La photo n'a pas pu être enregistrée. Le reste de la recette a été enregistré."
+}
 
 export default function RecipeSheet({ recipe, onClose, onSave }) {
   const [editMode, setEditMode] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [uploadPct, setUploadPct] = useState(null)
+  const [photoStep, setPhotoStep] = useState('')
   const [saveError, setSaveError] = useState('')
 
   // Brouillon d'édition
@@ -51,15 +58,30 @@ export default function RecipeSheet({ recipe, onClose, onSave }) {
     setStepsText((recipe.steps || []).join('\n'))
     setNotes(recipe.notes || '')
     setTags(recipe.tags || [])
-    setImageUrl(recipe.imageUrl || '')
+    setImageUrl(recipe.thumbUrl || recipe.imageUrl || '')
     setImageFile(null)
     setDoneIngredients([])
     setDoneSteps([])
     setSaveError('')
-    setUploadPct(null)
+    setPhotoStep('')
     // Dépendance sur l'identifiant seulement : après un enregistrement, le parent
     // renvoie un nouvel objet recette. Dépendre de l'objet relancerait cet effet
     // et effacerait aussitôt le mode édition et le message d'erreur.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recipe.id])
+
+  // La photo complète vit dans un document séparé : on la charge à l'ouverture
+  // de la fiche seulement. La miniature s'affiche en attendant.
+  useEffect(() => {
+    if (!recipe?.id || !(recipe.thumbUrl || recipe.imageUrl)) return
+    let annule = false
+    getDoc(photoRef(recipe.id))
+      .then(snap => {
+        const dataUrl = snap.data()?.dataUrl
+        if (!annule && dataUrl) setImageUrl(dataUrl)
+      })
+      .catch(err => console.error('Lecture de la photo impossible :', err))
+    return () => { annule = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recipe.id])
 
@@ -88,81 +110,38 @@ export default function RecipeSheet({ recipe, onClose, onSave }) {
     setDoneSteps([])
   }
 
-  /**
-   * Envoie la photo : compression, barre de progression, et abandon au bout de
-   * UPLOAD_TIMEOUT. Sans cette limite, le SDK Firebase réessaie tout seul
-   * pendant 2 minutes avant d'abandonner — d'où l'impression de boucle infinie
-   * quand le Storage n'est pas correctement configuré.
-   */
-  async function uploadPhoto(file) {
-    const compressed = await compressImage(file)
-    const task = uploadBytesResumable(
-      storageRef(storage, `recipes/${recipe.id}`),
-      compressed,
-      { contentType: compressed.type || 'image/jpeg' }
-    )
-
-    let timer
-    let timedOut = false
-    try {
-      await new Promise((resolve, reject) => {
-        timer = setTimeout(() => {
-          timedOut = true
-          // cancel() déclenche le callback d'erreur ci-dessous
-          task.cancel()
-        }, UPLOAD_TIMEOUT)
-
-        task.on(
-          'state_changed',
-          snap =>
-            setUploadPct(
-              snap.totalBytes
-                ? Math.round((snap.bytesTransferred / snap.totalBytes) * 100)
-                : null
-            ),
-          err => reject(timedOut ? new Error('timeout') : err),
-          resolve
-        )
-      })
-    } finally {
-      clearTimeout(timer)
-      setUploadPct(null)
-    }
-
-    return getDownloadURL(task.snapshot.ref)
-  }
-
   async function saveAll() {
     if (!recipe || saving) return
     setSaving(true)
     setSaveError('')
 
-    // On part TOUJOURS de l'URL déjà enregistrée : imageUrl peut contenir une
-    // adresse "blob:" temporaire (aperçu local), qui ne veut plus rien dire
-    // une fois la page fermée et ne doit jamais atterrir en base.
-    let url = recipe.imageUrl || ''
+    // Miniature affichée sur les cartes ; la photo complète vit dans un
+    // document séparé pour que la liste des recettes reste légère.
+    // On repart TOUJOURS de la valeur enregistrée : imageUrl peut contenir une
+    // adresse "blob:" temporaire (aperçu local) qui ne doit jamais aller en base.
+    let thumb = recipe.thumbUrl || recipe.imageUrl || ''
     let photoFailed = false
 
     try {
       if (imageFile) {
-        url = await uploadPhoto(imageFile)
+        setPhotoStep('Compression…')
+        const { full, thumb: mini } = await preparePhoto(imageFile)
+        setPhotoStep('Enregistrement…')
+        await setDoc(photoRef(recipe.id), { dataUrl: full, updatedAt: Date.now() })
+        thumb = mini
         setImageFile(null)
-        setImageUrl(url)
-      } else if (!imageUrl && recipe.imageUrl) {
-        await deleteObject(storageRef(storage, `recipes/${recipe.id}`)).catch(() => {})
-        url = ''
-      } else if (imageUrl && !imageUrl.startsWith('blob:')) {
-        url = imageUrl
+        setImageUrl(full)
+      } else if (!imageUrl && (recipe.thumbUrl || recipe.imageUrl)) {
+        await deleteDoc(photoRef(recipe.id)).catch(() => {})
+        thumb = ''
       }
     } catch (err) {
       photoFailed = true
-      url = recipe.imageUrl || '' // on conserve l'ancienne photo
-      console.error('Envoi de la photo impossible :', err)
-      setSaveError(
-        err?.message === 'timeout'
-          ? "La photo n'a pas pu être envoyée (délai dépassé). Vérifie ta connexion, ou que Firebase Storage est bien activé sur le projet. Le reste de la recette a été enregistré."
-          : "La photo n'a pas pu être envoyée. Le reste de la recette a été enregistré."
-      )
+      thumb = recipe.thumbUrl || recipe.imageUrl || '' // on conserve l'ancienne
+      console.error('Enregistrement de la photo impossible :', err?.code || '', err)
+      setSaveError(messageErreurPhoto(err))
+    } finally {
+      setPhotoStep('')
     }
 
     const updated = {
@@ -171,9 +150,10 @@ export default function RecipeSheet({ recipe, onClose, onSave }) {
       steps: parseStepsText(stepsText),
       notes,
       tags,
-      imageUrl: url,
+      thumbUrl: thumb,
+      imageUrl: '', // ancien champ Storage, désormais inutilisé
     }
-    await updateDoc(doc(db, 'families', FAMILY_ID, 'recipes', recipe.id), updated)
+    await updateDoc(recipeRef(recipe.id), updated)
     onSave({ ...recipe, ...updated })
     setSaving(false)
     // En cas d'échec photo, on reste en édition pour que le message soit vu
@@ -182,10 +162,8 @@ export default function RecipeSheet({ recipe, onClose, onSave }) {
 
   async function deleteCurrent() {
     if (!confirm('Supprimer définitivement cette recette ?')) return
-    await deleteDoc(doc(db, 'families', FAMILY_ID, 'recipes', recipe.id))
-    if (recipe.imageUrl) {
-      await deleteObject(storageRef(storage, `recipes/${recipe.id}`)).catch(() => {})
-    }
+    await deleteDoc(recipeRef(recipe.id))
+    await deleteDoc(photoRef(recipe.id)).catch(() => {})
     onClose()
   }
 
@@ -211,11 +189,7 @@ export default function RecipeSheet({ recipe, onClose, onSave }) {
 
         {editMode ? (
           <button className="sheet-bar-action primary" onClick={saveAll} disabled={saving}>
-            {saving
-              ? uploadPct !== null
-                ? `Envoi ${uploadPct} %`
-                : 'Enregistrement…'
-              : 'Enregistrer'}
+            {saving ? photoStep || 'Enregistrement…' : 'Enregistrer'}
           </button>
         ) : (
           <button className="sheet-bar-action" onClick={() => setEditMode(true)}>

@@ -2,7 +2,6 @@
 import { initializeApp } from 'firebase/app'
 import { getFirestore, enableIndexedDbPersistence } from 'firebase/firestore'
 import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth'
-import { getStorage } from 'firebase/storage'
 
 
 
@@ -42,8 +41,9 @@ onAuthStateChanged(auth, user => {
     console.log("Utilisateur Firebase connecté :", user?.uid);
 });
 
+// Pas de Firebase Storage : son activation exige un plan payant. Les photos de
+// recettes sont enregistrées dans Firestore (voir src/utils/image.js).
 export const db = getFirestore(app)
-export const storage = getStorage(app)
 
 // 3. Active le cache offline
 enableIndexedDbPersistence(db).catch(err => {
