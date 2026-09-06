@@ -3,11 +3,11 @@ import { useEffect, useMemo, useState } from 'react'
 import { collection, onSnapshot, addDoc, query, orderBy } from 'firebase/firestore'
 import { db } from './firebase'
 import './Recipes.css'
-import { Plus, Search, X } from 'lucide-react'
+import { Plus, Search, X, SlidersHorizontal } from 'lucide-react'
 import RecipeCard from './components/RecipeCard'
-import RecipeOverlay from './components/RecipeOverlay'
+import RecipeSheet from './components/RecipeSheet'
 import { parseRecipeText } from './utils/parseRecipe'
-import { TAG_GROUPS } from './utils/tags'
+import { ALL_TAGS } from './utils/tags'
 import { normalizeName } from './utils/normalize'
 
 const FAMILY_ID = 'sharedFamily'
@@ -18,6 +18,7 @@ export default function Recipes() {
   const [recipes, setRecipes] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
   const [activeTags, setActiveTags] = useState([])
+  const [showFilters, setShowFilters] = useState(false)
   const [selected, setSelected] = useState(null)
   const [creating, setCreating] = useState(false)
   const [draft, setDraft] = useState('')
@@ -34,13 +35,17 @@ export default function Recipes() {
     return () => document.body.classList.remove('recipes-page')
   }, [])
 
-  // Recherche sur le titre ET sur les ingrédients, filtres par tags cumulatifs
+  // Seuls les tags réellement portés par au moins une recette sont proposés :
+  // filtrer sur un tag que personne n'utilise ne sert à rien.
+  const usedTags = useMemo(
+    () => ALL_TAGS.filter(t => recipes.some(r => (r.tags || []).includes(t))),
+    [recipes]
+  )
+
   const filtered = useMemo(() => {
     const key = normalizeName(searchTerm)
     return recipes.filter(r => {
-      if (activeTags.length && !activeTags.every(t => (r.tags || []).includes(t))) {
-        return false
-      }
+      if (activeTags.length && !activeTags.every(t => (r.tags || []).includes(t))) return false
       if (!key) return true
       if (normalizeName(r.title || '').includes(key)) return true
       return (r.ingredients || []).some(i => normalizeName(i.name || '').includes(key))
@@ -50,7 +55,6 @@ export default function Recipes() {
   const toggleTag = tag =>
     setActiveTags(list => (list.includes(tag) ? list.filter(t => t !== tag) : [...list, tag]))
 
-  // Aperçu de ce que le parseur a compris, avant enregistrement
   const preview = useMemo(() => (draft.trim() ? parseRecipeText(draft) : null), [draft])
 
   const createRecipe = async () => {
@@ -72,43 +76,58 @@ export default function Recipes() {
     <div className="recipes-page-inner">
       <div className="recipes-header">
         <h2>Recettes</h2>
-        <button className="btn-add" onClick={() => setCreating(true)}>
+        <button className="btn-primary" onClick={() => setCreating(true)}>
           <Plus size={18} /> Nouvelle
         </button>
       </div>
 
-      <div className="recipes-search">
-        <Search size={18} />
-        <input
-          type="search"
-          value={searchTerm}
-          onChange={e => setSearchTerm(e.target.value)}
-          placeholder="Titre ou ingrédient…"
-          aria-label="Rechercher une recette"
-        />
-        {searchTerm && (
-          <button onClick={() => setSearchTerm('')} aria-label="Effacer">
-            <X size={16} />
+      <div className="recipes-toolbar">
+        <div className="recipes-search">
+          <Search size={18} />
+          <input
+            type="search"
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            placeholder="Titre ou ingrédient…"
+            aria-label="Rechercher une recette"
+          />
+          {searchTerm && (
+            <button onClick={() => setSearchTerm('')} aria-label="Effacer">
+              <X size={16} />
+            </button>
+          )}
+        </div>
+
+        {usedTags.length > 0 && (
+          <button
+            className={`filter-toggle${activeTags.length ? ' active' : ''}`}
+            onClick={() => setShowFilters(v => !v)}
+            aria-label="Filtrer par tag"
+          >
+            <SlidersHorizontal size={18} />
+            {activeTags.length > 0 && <span className="filter-count">{activeTags.length}</span>}
           </button>
         )}
       </div>
 
-      <div className="tag-filters">
-        {TAG_GROUPS.flatMap(g => g.tags).map(tag => (
-          <button
-            key={tag}
-            className={`tag-chip${activeTags.includes(tag) ? ' active' : ''}`}
-            onClick={() => toggleTag(tag)}
-          >
-            {tag}
-          </button>
-        ))}
-        {activeTags.length > 0 && (
-          <button className="tag-clear" onClick={() => setActiveTags([])}>
-            Tout afficher
-          </button>
-        )}
-      </div>
+      {showFilters && usedTags.length > 0 && (
+        <div className="tag-filters">
+          {usedTags.map(tag => (
+            <button
+              key={tag}
+              className={`tag-chip${activeTags.includes(tag) ? ' active' : ''}`}
+              onClick={() => toggleTag(tag)}
+            >
+              {tag}
+            </button>
+          ))}
+          {activeTags.length > 0 && (
+            <button className="tag-clear" onClick={() => setActiveTags([])}>
+              Tout afficher
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="recipes-grid">
         {filtered.length === 0 && (
@@ -124,7 +143,7 @@ export default function Recipes() {
       </div>
 
       {selected && (
-        <RecipeOverlay
+        <RecipeSheet
           recipe={selected}
           onClose={() => setSelected(null)}
           onSave={setSelected}
@@ -144,7 +163,7 @@ export default function Recipes() {
             </p>
 
             <textarea
-              className="overlay-textarea tall"
+              className="sheet-textarea"
               autoFocus
               value={draft}
               onChange={e => setDraft(e.target.value)}
@@ -169,11 +188,7 @@ export default function Recipes() {
 
             <div className="overlay-footer">
               <button className="btn-modify" onClick={() => setCreating(false)}>Annuler</button>
-              <button
-                className="btn-save"
-                onClick={createRecipe}
-                disabled={!preview?.title}
-              >
+              <button className="btn-save" onClick={createRecipe} disabled={!preview?.title}>
                 Créer
               </button>
             </div>

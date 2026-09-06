@@ -432,21 +432,6 @@ main {
   color: var(--text-faint);
 }
 
-.btn-add {
-  background: var(--accent);
-  color: var(--accent-contrast);
-  padding: 0.5rem 0.9rem;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  min-height: 44px;
-  font-weight: 600;
-}
-
-.btn-add:hover {
-  background: var(--accent-strong);
-}
-
 /* ==================================================
    6) OVERLAY / FULLSCREEN DETAIL
    ================================================== */
@@ -499,124 +484,9 @@ main {
   padding: 0 2.75rem;
 }
 
-.overlay-input-title {
-  width: 100%;
-  padding: 0.75rem;
-  font-size: 1.3rem;
-  margin-bottom: 1.5rem;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  color: var(--text);
-}
-
-.overlay-image {
-  width: 100%;
-  max-height: 200px;
-  object-fit: cover;
-  border-radius: 6px;
-  margin-bottom: 1rem;
-}
-
-.section {
-  background: var(--bg-alt);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 1rem 1.25rem;
-  margin-bottom: 1.5rem;
-  box-shadow: var(--shadow);
-}
-
-.section h3 {
-  margin: 0 0 0.75rem;
-  font-size: 1.1rem;
-  color: var(--accent-strong);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding-bottom: 0.25rem;
-  border-bottom: 2px solid var(--accent);
-}
-
-.section ul,
-.section ol {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.section-prep ol {
-  list-style: decimal;
-}
-
-.section ul li::before {
-  content: "•";
-  color: var(--accent);
-  display: inline-block;
-  width: 1em;
-  margin-left: -1em;
-}
-
-.section li {
-  margin-bottom: 0.5rem;
-  line-height: 1.4;
-}
-
-.overlay-textarea {
-  width: 100%;
-  min-height: 5rem;
-  padding: 0.75rem;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  color: var(--text);
-  resize: vertical;
-  font-size: 1rem;
-  line-height: 1.5;
-}
-
 /* ==================================================
    ÉDITION DYNAMIQUE
    ================================================== */
-.list-edit-row {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
-  align-items: center;
-}
-
-.list-edit-row input {
-  flex: 1;
-  width: 4rem;
-  padding: 0.5rem;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  color: var(--text);
-}
-
-.list-edit-row button {
-  background: none;
-  border: none;
-  color: var(--danger);
-  font-size: 1.2rem;
-  cursor: pointer;
-}
-
-.btn-small {
-  background: var(--accent);
-  color: var(--accent-contrast);
-  border: none;
-  padding: 0.5rem 0.8rem;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  margin-bottom: 0.75rem;
-  font-weight: 600;
-}
-
-.btn-small:hover {
-  background: var(--accent-strong);
-}
 
 .overlay-footer {
   display: flex;
@@ -653,29 +523,3 @@ main {
   min-height: 44px;
 }
 
-.btn-delete {
-  background: transparent;
-  border: 1px solid var(--danger);
-  color: var(--danger);
-  padding: 0.6rem 1.2rem;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 1rem;
-  min-height: 44px;
-}
-
-.btn-delete:hover {
-  background: var(--danger);
-  color: #fff;
-}
-
-.btn-remove-img {
-  background: transparent;
-  border: 1px solid var(--danger);
-  color: var(--danger);
-  padding: 0.4rem 0.7rem;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  margin-top: 0.5rem;
-}
