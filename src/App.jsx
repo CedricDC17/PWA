@@ -5,38 +5,21 @@ import { FamilyProvider } from './FamilyContext'
 import ShoppingList from './ShoppingList'
 import MealPlan from './MealPlan'
 import Recipes from './Recipes'
+import Sidebar from './components/Sidebar'
 
 export default function App() {
   const [page, setPage] = useState('shopping') // 'shopping' | 'meal' | 'recipes'
+  const [menuOpen, setMenuOpen] = useState(false)
 
   return (
     <FamilyProvider>
-      {/* Barre de navigation */}
-      <div className="navbar-wrapper">
-        <nav className="navbar">
-          <a
-            href="#"
-            className={page === 'shopping' ? 'active' : ''}
-            onClick={e => { e.preventDefault(); setPage('shopping') }}
-          >
-            🛒 Courses
-          </a>
-          <a
-            href="#"
-            className={page === 'meal' ? 'active' : ''}
-            onClick={e => { e.preventDefault(); setPage('meal') }}
-          >
-            🍽️ Repas
-          </a>
-          <a
-            href="#"
-            className={page === 'recipes' ? 'active' : ''}
-            onClick={e => { e.preventDefault(); setPage('recipes') }}
-          >
-            📒 Recettes
-          </a>
-        </nav>
-      </div>
+      <Sidebar
+        page={page}
+        onNavigate={setPage}
+        open={menuOpen}
+        onOpen={() => setMenuOpen(true)}
+        onClose={() => setMenuOpen(false)}
+      />
 
       <main>
         {page === 'shopping' && (

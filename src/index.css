@@ -1,0 +1,33 @@
+/* ==================================================
+   THEME TOKENS — "Deep Green"
+   ================================================== */
+:root {
+  /* Fond */
+  --bg: #0D2B1F;          /* fond principal, vert sapin très sombre */
+  --bg-alt: #123726;      /* variante un peu plus claire pour dégradés */
+  --surface: #163A28;     /* cartes, panneaux */
+  --surface-2: #1E4A34;   /* cartes survolées / sections imbriquées */
+  --surface-hover: #26583F;
+  --border: #2B5B40;
+
+  /* Texte */
+  --text: #F2EFE6;        /* blanc cassé chaud */
+  --text-muted: #A9C4B3;
+  --text-faint: #6F8F7C;
+
+  /* Accent — jaune moutarde / doré */
+  --accent: #E3A93B;
+  --accent-strong: #F0B94E;
+  --accent-hover: #C9902B;
+  --accent-contrast: #1A1200; /* texte sur fond accent */
+  --accent-soft: rgba(227, 169, 59, 0.16);
+
+  /* États */
+  --danger: #D97757;
+  --danger-hover: #C4623F;
+  --success: #6FB58A;
+
+  --radius: 10px;
+  --radius-lg: 16px;
+  --shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+}

@@ -14,8 +14,8 @@ body {
   height: 100%;
   min-height: 100%;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background: #121212;
-  color: #EEE;
+  background: var(--bg);
+  color: var(--text);
   overflow-x: hidden;
 }
 
@@ -39,40 +39,46 @@ button {
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
-  background-color: #1a1a1a;
+  background-color: var(--surface);
+  color: var(--text);
   cursor: pointer;
-  transition: border-color 0.25s;
+  transition: border-color 0.2s, background 0.2s;
 }
 
 button:hover {
-  border-color: #646cff;
+  border-color: var(--accent);
 }
 
 button:focus,
 button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 a {
   font-weight: 500;
-  color: #646cff;
+  color: var(--accent);
   text-decoration: none;
 }
 
 a:hover {
-  color: #535bf2;
+  color: var(--accent-strong);
+}
+
+h1, h2, h3 {
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
 /* ==================================================
-     1) LAYOUT: ROOT & MAIN
-     ================================================== */
+   1) LAYOUT: ROOT & MAIN
+   ================================================== */
 #root {
   width: 100%;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10vh;
 }
 
 main {
@@ -80,54 +86,138 @@ main {
   max-width: 480px;
   margin: 0 auto;
   padding: 1rem;
+  padding-top: 4.5rem; /* laisse la place au bouton burger flottant */
   display: flex;
   flex-direction: column;
   gap: 2rem;
 }
 
 /* ==================================================
-     2) NAVBAR
-     ================================================== */
-.navbar-wrapper {
-  position: sticky;
+   2) SIDEBAR — bouton burger flottant + tiroir overlay
+   ================================================== */
+.sidebar-toggle {
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  z-index: 1100;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  box-shadow: var(--shadow);
+  color: var(--text);
+}
+
+.sidebar-toggle:hover {
+  background: var(--surface-2);
+  border-color: var(--accent);
+}
+
+.sidebar-toggle svg {
+  width: 20px;
+  height: 20px;
+}
+
+.sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 1150;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.sidebar-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.sidebar-drawer {
+  position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
+  bottom: 0;
+  width: 78%;
+  max-width: 300px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  z-index: 1200;
+  transform: translateX(-100%);
+  transition: transform 0.28s ease;
   display: flex;
-  justify-content: center;
-  z-index: 999;
+  flex-direction: column;
+  padding: 1.5rem 1rem;
+  gap: 0.25rem;
 }
 
-.navbar {
-  display: inline-flex;
-  gap: 1rem;
-  background: #1E1E1E;
-  padding: 0.5rem 1rem;
-  border-radius: 0 0 8px 8px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+.sidebar-drawer.open {
+  transform: translateX(0);
 }
 
-.navbar a {
-  color: #EEE;
-  padding: 0.3rem 0.6rem;
-  border-radius: 4px;
-  transition: background 0.2s;
-  text-align: center;
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0 0.5rem 1.25rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
 }
 
-.navbar a:hover,
-.navbar a.active {
-  background: #2A2A2A;
+.sidebar-header img {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+}
+
+.sidebar-header span {
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.sidebar-drawer a {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0.75rem;
+  border-radius: 8px;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.sidebar-drawer a svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.sidebar-drawer a:hover {
+  background: var(--surface-2);
+}
+
+.sidebar-drawer a.active {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.sidebar-drawer a.active svg {
+  color: var(--accent-strong);
 }
 
 /* ==================================================
-     4) MEAL PLAN
-     ================================================== */
+   4) MEAL PLAN
+   ================================================== */
 .meal-container {
-  background: #1E1E1E;
-  border-radius: 8px;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
   padding: 1rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow);
 }
 
 .meal-container h2 {
@@ -143,114 +233,150 @@ main {
 
 .meal-table th,
 .meal-table td {
-  border: 1px solid #333;
+  border: 1px solid var(--border);
   padding: 0.5rem;
   text-align: center;
 }
 
 .meal-table th {
-  background: #2A2A2A;
+  background: var(--surface-2);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .meal-table td {
-  background: #242424;
+  background: var(--bg-alt);
   position: relative;
   cursor: pointer;
+  min-height: 44px;
+  font-size: 0.9rem;
 }
 
 .meal-table td:hover {
-  background: #333;
+  background: var(--surface-2);
 }
 
-.meal-table td.dragover {
-  background: #555;
+.meal-table td .slot-empty {
+  color: var(--text-faint);
+  font-size: 1.1rem;
 }
 
-.meal-table td button {
+.meal-table td .slot-remove {
   position: absolute;
-  top: 4px;
-  right: 4px;
+  top: 2px;
+  right: 2px;
   background: none;
   border: none;
-  color: #4FC3F7;
-  font-size: 1rem;
-  cursor: pointer;
+  color: var(--danger);
+  font-size: 0.85rem;
+  padding: 0.2rem 0.4rem;
+  min-width: 32px;
+  min-height: 32px;
 }
 
 .clear-plan-btn {
   width: 100%;
-  padding: 0.5rem;
-  background: #F44336;
-  border: none;
-  border-radius: 4px;
-  color: #fff;
+  padding: 0.6rem;
+  background: transparent;
+  border: 1px solid var(--danger);
+  border-radius: 8px;
+  color: var(--danger);
   cursor: pointer;
   font-weight: 500;
 }
 
-/* Historical meal tables */
-.meal-history {
-  margin-top: 1rem;
-}
-
-/* Liste d'idées de repas */
-.ideas-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.dish-card {
-  position: relative;
-  background: #2A2A2A;
-  padding: 0.5rem 0.75rem;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.dish-card:hover {
-  background: #333;
-}
-
-.ideas-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.5rem;
-}
-
-.btn-remove-dish {
-  position: absolute;
-  top: -6px;
-  right: -6px;
-  background: #F44336;
-  border: none;
+.clear-plan-btn:hover {
+  background: var(--danger);
   color: #fff;
-  padding: 0 0.3rem;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  line-height: 1;
-}
-
-.btn-remove-dish:hover {
-  background: #d32f2f;
-}
-
-.history-week {
-  margin-bottom: 1rem;
-}
-
-.history-week summary {
-  cursor: pointer;
-  padding: 0.25rem 0;
-  font-weight: 600;
 }
 
 /* ==================================================
-     5) RECIPES / CARDS
-     ================================================== */
+   Recette — sélecteur de repas (picker de recette)
+   ================================================== */
+.recipe-picker-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 50vh;
+  overflow-y: auto;
+  margin-top: 1rem;
+}
+
+.recipe-picker-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: var(--surface-2);
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+  cursor: pointer;
+  text-align: left;
+  min-height: 44px;
+}
+
+.recipe-picker-item:hover {
+  background: var(--surface-hover);
+}
+
+.recipe-picker-item img {
+  width: 36px;
+  height: 36px;
+  object-fit: cover;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.recipe-picker-empty {
+  color: var(--text-muted);
+  text-align: center;
+  padding: 1rem 0;
+}
+
+/* ==================================================
+   Ingrédients manquants (après assignation d'un repas)
+   ================================================== */
+.missing-ingredients-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 1rem 0;
+}
+
+.missing-ingredient-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: var(--surface-2);
+  border-radius: 8px;
+  padding: 0.65rem 0.9rem;
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.missing-ingredient-row input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--accent);
+  flex-shrink: 0;
+}
+
+.missing-ingredient-row span.qty {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  min-width: 3.5rem;
+}
+
+.missing-hint {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+
+/* ==================================================
+   5) RECIPES / CARDS
+   ================================================== */
 .card-container {
   width: 100%;
   padding: 1rem;
@@ -259,7 +385,6 @@ main {
   gap: 25px;
 }
 
-/* Champ de recherche dans l’en‑tête */
 .card-header {
   display: flex;
   align-items: center;
@@ -269,25 +394,32 @@ main {
 
 .search-input {
   flex: 1;
-  padding: 0.4rem 0.8rem;
-  border: 1px solid #444;
-  border-radius: 4px;
-  background: #2A2A2A;
-  color: #EEE;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text);
   font-size: 1rem;
+  min-height: 44px;
 }
 
 .search-input::placeholder {
-  color: #888;
+  color: var(--text-faint);
 }
 
 .btn-add {
-  background: #4CAF50;
-  color: #fff;
-  padding: 0.3rem 0.8rem;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  padding: 0.5rem 0.9rem;
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
   cursor: pointer;
+  min-height: 44px;
+  font-weight: 600;
+}
+
+.btn-add:hover {
+  background: var(--accent-strong);
 }
 
 .cards-grid {
@@ -311,14 +443,15 @@ main {
 }
 
 .card {
-  background: #2A2A2A;
-  border-radius: 8px;
+  background: var(--surface);
+  border-radius: var(--radius);
   padding: 1rem;
   display: flex;
   flex-direction: column;
   overflow-wrap: break-word;
   word-break: break-word;
   hyphens: auto;
+  box-shadow: var(--shadow);
 }
 
 .card-thumb {
@@ -346,63 +479,64 @@ main {
 }
 
 /* ==================================================
-     6) OVERLAY / FULLSCREEN DETAIL
-     ================================================== */
+   6) OVERLAY / FULLSCREEN DETAIL
+   ================================================== */
 .overlay {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.75);
+  background: rgba(0, 0, 0, 0.65);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 1300;
+  padding: 1rem;
 }
 
 .overlay-content {
   position: relative;
-  background: #1E1E1E;
-  border-radius: 8px;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
   width: 90%;
   max-width: 600px;
   max-height: 90%;
   overflow-y: auto;
   padding: 1.5rem;
+  box-shadow: var(--shadow);
 }
 
-/* bouton fermer */
 .btn-close {
   position: absolute;
   top: 0.5rem;
   right: 0.5rem;
   background: none;
   border: none;
-  color: #EEE;
+  color: var(--text);
   font-size: 1.5rem;
   cursor: pointer;
+  min-width: 44px;
+  min-height: 44px;
 }
 
-/* titre overlay */
 .overlay-title {
   margin-bottom: 1rem;
   text-align: center;
-  font-size: 1.6rem;
-  font-weight: 600;
-  color: #4FC3F7;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--accent-strong);
 }
 
-/* champ titre éditable */
 .overlay-input-title {
   width: 100%;
   padding: 0.75rem;
-  font-size: 1.5rem;
+  font-size: 1.3rem;
   margin-bottom: 1.5rem;
-  background: #2A2A2A;
-  border: 1px solid #333;
-  border-radius: 4px;
-  color: #EEE;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
 }
 
 .overlay-image {
@@ -413,36 +547,25 @@ main {
   margin-bottom: 1rem;
 }
 
-/* ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
-       SECTIONS
-       –––––––––––––––––––––––––––––––––––––––––––––––––––––––––– */
 .section {
-  background: #242424;
-  /* fond légèrement différencié */
-  border: 1px solid #333;
-  /* bord plus net */
-  border-radius: 6px;
-  /* coins arrondis */
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
   padding: 1rem 1.25rem;
-  /* plus d’espace interne */
   margin-bottom: 1.5rem;
-  /* espacement entre sections */
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow);
 }
 
 .section h3 {
   margin: 0 0 0.75rem;
-  font-size: 1.2rem;
-  color: #4FC3F7;
-  /* accent color */
+  font-size: 1.1rem;
+  color: var(--accent-strong);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   padding-bottom: 0.25rem;
-  border-bottom: 2px solid #4FC3F7;
-  /* ligne accent sous le titre */
+  border-bottom: 2px solid var(--accent);
 }
 
-/* Liste d’ingrédients / d’étapes */
 .section ul,
 .section ol {
   margin: 0;
@@ -452,12 +575,11 @@ main {
 
 .section-prep ol {
   list-style: decimal;
-
 }
 
 .section ul li::before {
   content: "•";
-  color: #4FC3F7;
+  color: var(--accent);
   display: inline-block;
   width: 1em;
   margin-left: -1em;
@@ -468,23 +590,22 @@ main {
   line-height: 1.4;
 }
 
-/* zone de notes */
 .overlay-textarea {
   width: 100%;
   min-height: 5rem;
   padding: 0.75rem;
-  background: #2A2A2A;
-  border: 1px solid #333;
-  border-radius: 4px;
-  color: #EEE;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
   resize: vertical;
   font-size: 1rem;
   line-height: 1.5;
 }
 
-/* ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
-       ÉDITION DYNAMIQUE
-       –––––––––––––––––––––––––––––––––––––––––––––––––––––––––– */
+/* ==================================================
+   ÉDITION DYNAMIQUE
+   ================================================== */
 .list-edit-row {
   display: flex;
   gap: 0.5rem;
@@ -496,80 +617,93 @@ main {
   flex: 1;
   width: 4rem;
   padding: 0.5rem;
-  background: #2A2A2A;
-  border: 1px solid #333;
-  border-radius: 4px;
-  color: #EEE;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
 }
 
 .list-edit-row button {
   background: none;
   border: none;
-  color: #F44336;
+  color: var(--danger);
   font-size: 1.2rem;
   cursor: pointer;
 }
 
 .btn-small {
-  background: #4FC3F7;
-  color: #121212;
+  background: var(--accent);
+  color: var(--accent-contrast);
   border: none;
   padding: 0.5rem 0.8rem;
-  border-radius: 4px;
+  border-radius: 8px;
   cursor: pointer;
   font-size: 0.9rem;
   margin-bottom: 0.75rem;
-  transition: background 0.2s;
+  font-weight: 600;
 }
 
 .btn-small:hover {
-  background: #39A6D9;
+  background: var(--accent-strong);
 }
 
-/* pied d’overlay – actions */
 .overlay-footer {
   display: flex;
   gap: 1rem;
   justify-content: flex-end;
   margin-top: 1.5rem;
+  flex-wrap: wrap;
 }
 
 .btn-save {
-  background: #4FC3F7;
-  color: #121212;
+  background: var(--accent);
+  color: var(--accent-contrast);
   padding: 0.6rem 1.2rem;
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
   cursor: pointer;
   font-size: 1rem;
+  font-weight: 600;
+  min-height: 44px;
+}
+
+.btn-save:hover {
+  background: var(--accent-strong);
 }
 
 .btn-modify {
-  background: #FF9800;
-  color: #121212;
+  background: var(--surface-2);
+  color: var(--text);
   padding: 0.6rem 1.2rem;
-  border: none;
-  border-radius: 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
   cursor: pointer;
   font-size: 1rem;
+  min-height: 44px;
 }
 
 .btn-delete {
-  background: #F44336;
-  color: #fff;
+  background: transparent;
+  border: 1px solid var(--danger);
+  color: var(--danger);
   padding: 0.6rem 1.2rem;
-  border: none;
-  border-radius: 4px;
+  border-radius: 8px;
   cursor: pointer;
   font-size: 1rem;
+  min-height: 44px;
+}
+
+.btn-delete:hover {
+  background: var(--danger);
+  color: #fff;
 }
 
 .btn-remove-img {
-  background: #F44336;
-  color: #fff;
-  padding: 0.3rem 0.6rem;
-  border: none;
-  border-radius: 4px;
+  background: transparent;
+  border: 1px solid var(--danger);
+  color: var(--danger);
+  padding: 0.4rem 0.7rem;
+  border-radius: 8px;
   cursor: pointer;
   font-size: 0.9rem;
   margin-top: 0.5rem;
