@@ -102,6 +102,25 @@ export function parseStepsText(text) {
     .filter(Boolean)
 }
 
+/**
+ * Écarte les ingrédients et les étapes vides ou faits d'espaces.
+ * Certaines recettes déjà en base contiennent de telles lignes fantômes :
+ * on les ignore à l'affichage, et l'enregistrement suivant les efface.
+ */
+export function cleanRecipe(recipe = {}) {
+  return {
+    ...recipe,
+    ingredients: (recipe.ingredients || [])
+      .filter(i => i && String(i.name || '').trim())
+      .map(i => ({
+        name: String(i.name).trim(),
+        quantity: String(i.quantity || '').trim(),
+      })),
+    steps: (recipe.steps || []).map(s => String(s || '').trim()).filter(Boolean),
+    notes: String(recipe.notes || '').trim(),
+  }
+}
+
 /** Remet une liste d'ingrédients sous forme de texte éditable. */
 export function ingredientsToText(ingredients = []) {
   return ingredients

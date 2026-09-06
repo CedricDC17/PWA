@@ -136,10 +136,12 @@ export default function ShoppingList() {
     })
   }
 
-  // Un tap bascule dans les deux sens : sur la liste <-> hors de la liste
+  // Un tap bascule dans les deux sens : sur la liste <-> hors de la liste.
+  // En sortant, la quantité repart à zéro (elle vaut pour ces courses-là) mais
+  // l'unité reste mémorisée : les pommes de terre se rachètent en kg.
   const toggleItem = item =>
     item.checked
-      ? updateDoc(itemRef(item.id), { checked: false, bought: false })
+      ? updateDoc(itemRef(item.id), { checked: false, bought: false, quantity: null })
       : updateDoc(itemRef(item.id), {
           checked: true,
           bought: false,
@@ -181,12 +183,15 @@ export default function ShoppingList() {
     updateDoc(itemRef(item.id), { bought: value })
 
   // À la sortie : ce qui est acheté quitte la liste active, le reste y demeure.
-  // Rien n'est supprimé de l'historique.
+  // Rien n'est supprimé de l'historique ; seule la quantité est remise à zéro
+  // pour ne pas traîner d'une semaine sur l'autre (l'unité, elle, est gardée).
   const exitStoreMode = async () => {
     await Promise.all(
       items
         .filter(i => i.bought)
-        .map(i => updateDoc(itemRef(i.id), { checked: false, bought: false }))
+        .map(i =>
+          updateDoc(itemRef(i.id), { checked: false, bought: false, quantity: null })
+        )
     )
     setStoreMode(false)
   }

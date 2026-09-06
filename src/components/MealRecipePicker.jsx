@@ -4,6 +4,7 @@ import { collection, onSnapshot, orderBy, query } from 'firebase/firestore'
 import { db } from '../firebase'
 import { PenLine } from 'lucide-react'
 import { normalizeName } from '../utils/normalize'
+import { cleanRecipe } from '../utils/parseRecipe'
 
 const FAMILY_ID = 'sharedFamily'
 
@@ -19,7 +20,7 @@ export default function MealRecipePicker({ day, time, onSelect, onSelectFree, on
   useEffect(() => {
     const colRef = collection(db, 'families', FAMILY_ID, 'recipes')
     return onSnapshot(query(colRef, orderBy('title')), snap =>
-      setRecipes(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+      setRecipes(snap.docs.map(d => cleanRecipe({ id: d.id, ...d.data() })))
     )
   }, [])
 

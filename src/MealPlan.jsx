@@ -13,6 +13,9 @@ import { db } from './firebase';
 import { format } from 'date-fns';
 import MealRecipePicker from './components/MealRecipePicker';
 import MissingIngredientsModal from './components/MissingIngredientsModal';
+import { toDisplayName, findExact } from './utils/normalize';
+import { detectRayon } from './utils/rayons';
+import { parseQuantityForShopping } from './utils/units';
 
 const FAMILY_ID = 'sharedFamily';
 
@@ -68,36 +71,46 @@ export default function MealPlan() {
 
   const clearPlan = () => setDoc(planRef, {});
 
-  // Ajoute les ingrédients manquants à la liste de courses (families/{id}/shoppingItems)
-  const addIngredientsToShoppingList = async names => {
+  // Ajoute les ingrédients manquants à la liste de courses (families/{id}/shoppingItems),
+  // en reportant quantité et unité quand elles ont un sens pour les achats.
+  const addIngredientsToShoppingList = async ingredients => {
     const col = collection(db, 'families', FAMILY_ID, 'shoppingItems');
     const snap = await getDocs(col);
     const existing = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-    for (const rawName of names) {
-      const name = rawName.trim();
+    for (const ing of ingredients) {
+      const name = toDisplayName(ing.name);
       if (!name) continue;
-      const match = existing.find(
-        i => i.name.toLowerCase() === name.toLowerCase()
-      );
+      const { quantity, unit } = parseQuantityForShopping(ing.quantity);
+      const match = findExact(existing, name);
+
       if (match) {
         await updateDoc(doc(db, 'families', FAMILY_ID, 'shoppingItems', match.id), {
-          checked: true
+          checked: true,
+          bought: false,
+          useCount: (match.useCount || 0) + 1,
+          // on ne remplace pas une quantité déjà saisie à la main
+          ...(quantity && !match.quantity ? { quantity, unit: unit || null } : {}),
         });
       } else {
         await addDoc(col, {
           name,
           checked: true,
+          bought: false,
           favored: false,
+          rayon: detectRayon(name),
+          quantity: quantity || null,
+          unit: unit || null,
+          useCount: 1,
           createdAt: Date.now()
         });
       }
     }
   };
 
-  const handleMissingDone = async missingNames => {
-    if (missingNames.length) {
-      await addIngredientsToShoppingList(missingNames);
+  const handleMissingDone = async missing => {
+    if (missing.length) {
+      await addIngredientsToShoppingList(missing);
     }
     setMissingStep(null);
   };

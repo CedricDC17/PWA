@@ -6,7 +6,7 @@ import './Recipes.css'
 import { Plus, Search, X, SlidersHorizontal } from 'lucide-react'
 import RecipeCard from './components/RecipeCard'
 import RecipeSheet from './components/RecipeSheet'
-import { parseRecipeText } from './utils/parseRecipe'
+import { parseRecipeText, cleanRecipe } from './utils/parseRecipe'
 import { ALL_TAGS } from './utils/tags'
 import { normalizeName } from './utils/normalize'
 
@@ -26,7 +26,8 @@ export default function Recipes() {
   useEffect(() => {
     const q = query(colRef, orderBy('title'))
     return onSnapshot(q, snap =>
-      setRecipes(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+      // cleanRecipe : les fiches déjà en base peuvent contenir des lignes vides
+      setRecipes(snap.docs.map(d => cleanRecipe({ id: d.id, ...d.data() })))
     )
   }, [])
 
@@ -88,6 +89,13 @@ export default function Recipes() {
             type="search"
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
+            // quand la recherche ne laisse qu'une recette, Entrée l'ouvre directement
+            onKeyDown={e => {
+              if (e.key === 'Enter' && filtered.length === 1) {
+                setSelected(filtered[0])
+                e.currentTarget.blur()
+              }
+            }}
             placeholder="Titre ou ingrédient…"
             aria-label="Rechercher une recette"
           />

@@ -8,10 +8,12 @@ export default function MissingIngredientsModal({ recipe, onDone, onClose }) {
     setChecked(arr => arr.map((v, idx) => (idx === i ? !v : v)))
 
   const submit = () => {
+    // On transmet la quantité avec le nom : la liste de courses en tire
+    // ce qui a du sens à l'achat (200 g oui, 2 cuillères non).
     const missing = ingredients
       .filter((_, i) => checked[i])
-      .map(ing => ing.name)
-      .filter(Boolean)
+      .filter(ing => ing.name)
+      .map(ing => ({ name: ing.name, quantity: ing.quantity || '' }))
     onDone(missing)
   }
 
