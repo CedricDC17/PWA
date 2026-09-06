@@ -4,11 +4,14 @@ import { updateDoc, deleteDoc, doc } from 'firebase/firestore'
 import { db, storage } from '../firebase'
 import {
   ref as storageRef,
-  uploadBytes,
+  uploadBytesResumable,
   getDownloadURL,
   deleteObject,
 } from 'firebase/storage'
-import { ChevronLeft, Pencil, Trash2, ImagePlus, RotateCcw, CookingPot, Check } from 'lucide-react'
+import { compressImage } from '../utils/image'
+import {
+  ChevronLeft, Pencil, Trash2, ImagePlus, RotateCcw, CookingPot, Check, AlertTriangle,
+} from 'lucide-react'
 import {
   parseIngredientsText,
   parseStepsText,
@@ -19,10 +22,13 @@ import useWakeLock from '../hooks/useWakeLock'
 import useDismissable from '../hooks/useDismissable'
 
 const FAMILY_ID = 'sharedFamily'
+const UPLOAD_TIMEOUT = 45000 // ms avant d'abandonner l'envoi d'une photo
 
 export default function RecipeSheet({ recipe, onClose, onSave }) {
   const [editMode, setEditMode] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [uploadPct, setUploadPct] = useState(null)
+  const [saveError, setSaveError] = useState('')
 
   // Brouillon d'édition
   const [title, setTitle] = useState('')
@@ -49,7 +55,13 @@ export default function RecipeSheet({ recipe, onClose, onSave }) {
     setImageFile(null)
     setDoneIngredients([])
     setDoneSteps([])
-  }, [recipe])
+    setSaveError('')
+    setUploadPct(null)
+    // Dépendance sur l'identifiant seulement : après un enregistrement, le parent
+    // renvoie un nouvel objet recette. Dépendre de l'objet relancerait cet effet
+    // et effacerait aussitôt le mode édition et le message d'erreur.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recipe.id])
 
   // Écran maintenu allumé pendant la lecture (pas pendant l'édition)
   useWakeLock(!editMode)
@@ -76,22 +88,81 @@ export default function RecipeSheet({ recipe, onClose, onSave }) {
     setDoneSteps([])
   }
 
+  /**
+   * Envoie la photo : compression, barre de progression, et abandon au bout de
+   * UPLOAD_TIMEOUT. Sans cette limite, le SDK Firebase réessaie tout seul
+   * pendant 2 minutes avant d'abandonner — d'où l'impression de boucle infinie
+   * quand le Storage n'est pas correctement configuré.
+   */
+  async function uploadPhoto(file) {
+    const compressed = await compressImage(file)
+    const task = uploadBytesResumable(
+      storageRef(storage, `recipes/${recipe.id}`),
+      compressed,
+      { contentType: compressed.type || 'image/jpeg' }
+    )
+
+    let timer
+    let timedOut = false
+    try {
+      await new Promise((resolve, reject) => {
+        timer = setTimeout(() => {
+          timedOut = true
+          // cancel() déclenche le callback d'erreur ci-dessous
+          task.cancel()
+        }, UPLOAD_TIMEOUT)
+
+        task.on(
+          'state_changed',
+          snap =>
+            setUploadPct(
+              snap.totalBytes
+                ? Math.round((snap.bytesTransferred / snap.totalBytes) * 100)
+                : null
+            ),
+          err => reject(timedOut ? new Error('timeout') : err),
+          resolve
+        )
+      })
+    } finally {
+      clearTimeout(timer)
+      setUploadPct(null)
+    }
+
+    return getDownloadURL(task.snapshot.ref)
+  }
+
   async function saveAll() {
     if (!recipe || saving) return
     setSaving(true)
-    let url = imageUrl
+    setSaveError('')
+
+    // On part TOUJOURS de l'URL déjà enregistrée : imageUrl peut contenir une
+    // adresse "blob:" temporaire (aperçu local), qui ne veut plus rien dire
+    // une fois la page fermée et ne doit jamais atterrir en base.
+    let url = recipe.imageUrl || ''
+    let photoFailed = false
+
     try {
       if (imageFile) {
-        const imgRef = storageRef(storage, `recipes/${recipe.id}`)
-        await uploadBytes(imgRef, imageFile)
-        url = await getDownloadURL(imgRef)
+        url = await uploadPhoto(imageFile)
         setImageFile(null)
         setImageUrl(url)
       } else if (!imageUrl && recipe.imageUrl) {
         await deleteObject(storageRef(storage, `recipes/${recipe.id}`)).catch(() => {})
+        url = ''
+      } else if (imageUrl && !imageUrl.startsWith('blob:')) {
+        url = imageUrl
       }
     } catch (err) {
-      console.error('Envoi de l’image impossible :', err)
+      photoFailed = true
+      url = recipe.imageUrl || '' // on conserve l'ancienne photo
+      console.error('Envoi de la photo impossible :', err)
+      setSaveError(
+        err?.message === 'timeout'
+          ? "La photo n'a pas pu être envoyée (délai dépassé). Vérifie ta connexion, ou que Firebase Storage est bien activé sur le projet. Le reste de la recette a été enregistré."
+          : "La photo n'a pas pu être envoyée. Le reste de la recette a été enregistré."
+      )
     }
 
     const updated = {
@@ -104,8 +175,9 @@ export default function RecipeSheet({ recipe, onClose, onSave }) {
     }
     await updateDoc(doc(db, 'families', FAMILY_ID, 'recipes', recipe.id), updated)
     onSave({ ...recipe, ...updated })
-    setEditMode(false)
     setSaving(false)
+    // En cas d'échec photo, on reste en édition pour que le message soit vu
+    if (!photoFailed) setEditMode(false)
   }
 
   async function deleteCurrent() {
@@ -139,7 +211,11 @@ export default function RecipeSheet({ recipe, onClose, onSave }) {
 
         {editMode ? (
           <button className="sheet-bar-action primary" onClick={saveAll} disabled={saving}>
-            {saving ? 'Enregistrement…' : 'Enregistrer'}
+            {saving
+              ? uploadPct !== null
+                ? `Envoi ${uploadPct} %`
+                : 'Enregistrement…'
+              : 'Enregistrer'}
           </button>
         ) : (
           <button className="sheet-bar-action" onClick={() => setEditMode(true)}>
@@ -149,6 +225,12 @@ export default function RecipeSheet({ recipe, onClose, onSave }) {
       </header>
 
       <div className="sheet-scroll">
+        {saveError && (
+          <p className="sheet-error" role="alert">
+            <AlertTriangle size={18} /> {saveError}
+          </p>
+        )}
+
         {/* ---------------- Visuel ---------------- */}
         {imageUrl && <img src={imageUrl} alt="" className="recipe-hero" />}
 
