@@ -1,146 +1,128 @@
 // src/Recipes.jsx
-import React, { useEffect, useState } from 'react'
-import {
-  collection,
-  onSnapshot,
-  addDoc
-} from 'firebase/firestore'
+import { useEffect, useMemo, useState } from 'react'
+import { collection, onSnapshot, addDoc, query, orderBy } from 'firebase/firestore'
 import { db } from './firebase'
-import { query, orderBy } from 'firebase/firestore'
 import './Recipes.css'
+import { Plus, Search, X } from 'lucide-react'
 import RecipeCard from './components/RecipeCard'
 import RecipeOverlay from './components/RecipeOverlay'
+import { parseRecipeText } from './utils/parseRecipe'
+import { TAG_GROUPS } from './utils/tags'
+import { normalizeName } from './utils/normalize'
+
+const FAMILY_ID = 'sharedFamily'
 
 export default function Recipes() {
-  const FAMILY_ID = 'sharedFamily'
   const colRef = collection(db, 'families', FAMILY_ID, 'recipes')
-  const q      = query(colRef, orderBy('title'))     // tri alphabétique par titre
 
-  const [recipes, setRecipes]       = useState([])
+  const [recipes, setRecipes] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
-  const [selected, setSelected]     = useState(null)
-  const [pasteMode, setPasteMode]   = useState(false)
-  const [pasteText, setPasteText]   = useState('')
+  const [activeTags, setActiveTags] = useState([])
+  const [selected, setSelected] = useState(null)
+  const [creating, setCreating] = useState(false)
+  const [draft, setDraft] = useState('')
 
-  // real‑time load
   useEffect(() => {
-    const unsub = onSnapshot(q, snap =>
+    const q = query(colRef, orderBy('title'))
+    return onSnapshot(q, snap =>
       setRecipes(snap.docs.map(d => ({ id: d.id, ...d.data() })))
     )
-    return unsub
   }, [])
 
-  // Classe CSS pour ajuster le layout à la page "recettes"
   useEffect(() => {
     document.body.classList.add('recipes-page')
-    return () => {
-      document.body.classList.remove('recipes-page')
-    }
+    return () => document.body.classList.remove('recipes-page')
   }, [])
 
-  // search‐filtered list
-  const filtered = recipes.filter(r =>
-    r.title.toLowerCase().includes(searchTerm.toLowerCase())
-  )
-
-  // open overlay
-  function openOverlay(r) {
-    setSelected(r)
-  }
-
-  // add new recipe
-  async function addRecipe() {
-    const title = prompt('Titre de la nouvelle recette ?')
-    if (!title) return
-    await addDoc(colRef, {
-      title,
-      ingredients: [],
-      steps: [],
-      notes: '',
-      imageUrl: ''
+  // Recherche sur le titre ET sur les ingrédients, filtres par tags cumulatifs
+  const filtered = useMemo(() => {
+    const key = normalizeName(searchTerm)
+    return recipes.filter(r => {
+      if (activeTags.length && !activeTags.every(t => (r.tags || []).includes(t))) {
+        return false
+      }
+      if (!key) return true
+      if (normalizeName(r.title || '').includes(key)) return true
+      return (r.ingredients || []).some(i => normalizeName(i.name || '').includes(key))
     })
-  }
+  }, [recipes, searchTerm, activeTags])
 
-  function parseRecipe(text) {
-    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l)
-    const recipe = { title: '', ingredients: [], steps: [], notes: '', imageUrl: '' }
-    if (!lines.length) return recipe
+  const toggleTag = tag =>
+    setActiveTags(list => (list.includes(tag) ? list.filter(t => t !== tag) : [...list, tag]))
 
-    const firstLine = lines.shift()
-    const titleMatch = firstLine.match(/^(.*)\s*\(([^)]+)\)\s*$/)
-    if (titleMatch) {
-      recipe.title = titleMatch[1].trim()
-      recipe.notes = titleMatch[2].trim()
-    } else {
-      recipe.title = firstLine.trim()
-    }
+  // Aperçu de ce que le parseur a compris, avant enregistrement
+  const preview = useMemo(() => (draft.trim() ? parseRecipeText(draft) : null), [draft])
 
-    const ingIndex = lines.findIndex(l => /^ingr[eé]dients?:?$/i.test(l))
-    const stepIndex = lines.findIndex(l => /^étapes?:?$/i.test(l) || /^etapes?:?$/i.test(l))
-
-    if (ingIndex !== -1) {
-      const ingredientsLine = lines[ingIndex + 1] || ''
-      recipe.ingredients = ingredientsLine
-        .split('·')
-        .map(part => {
-          const item = part.trim()
-          if (!item) return null
-          const m = item.match(/^(\d+(?:[.,]\d+)?(?:\s*\w+)?)(.*)$/)
-          if (m) {
-            return { quantity: m[1].trim(), name: m[2].trim() }
-          }
-          return { quantity: '', name: item }
-        })
-        .filter(Boolean)
-    }
-
-    if (stepIndex !== -1) {
-      const stepLines = lines.slice(stepIndex + 1)
-      recipe.steps = stepLines.filter(Boolean)
-    }
-
-    return recipe
-  }
-
-  function openPasteOverlay() {
-    setPasteText('')
-    setPasteMode(true)
-  }
-
-  async function importFromText() {
-    const rec = parseRecipe(pasteText)
-    if (!rec.title) { alert('Titre manquant'); return }
-    const docRef = await addDoc(colRef, { ...rec, imageUrl: '' })
-    setPasteMode(false)
-    setPasteText('')
-    setSelected({ id: docRef.id, ...rec, imageUrl: '' })
+  const createRecipe = async () => {
+    if (!preview?.title) return
+    const ref = await addDoc(colRef, {
+      title: preview.title,
+      ingredients: preview.ingredients,
+      steps: preview.steps,
+      notes: preview.notes,
+      tags: [],
+      imageUrl: '',
+    })
+    setCreating(false)
+    setDraft('')
+    setSelected({ id: ref.id, ...preview })
   }
 
   return (
-    <div className="card-container">
-      {/* header with search + add */}
-      <div className="card-header">
+    <div className="recipes-page-inner">
+      <div className="recipes-header">
         <h2>Recettes</h2>
-        <input
-          type="search"
-          className="search-input"
-          placeholder="Rechercher…"
-          value={searchTerm}
-          onChange={e => setSearchTerm(e.target.value)}
-        />
-        <button className="btn-add" onClick={addRecipe}>➕</button>
-        <button className="btn-add" onClick={openPasteOverlay}>📋</button>
+        <button className="btn-add" onClick={() => setCreating(true)}>
+          <Plus size={18} /> Nouvelle
+        </button>
       </div>
 
-      {/* cards grid */}
-      <div className="cards-grid">
-        {filtered.length === 0 && <p>Aucune recette trouvée.</p>}
+      <div className="recipes-search">
+        <Search size={18} />
+        <input
+          type="search"
+          value={searchTerm}
+          onChange={e => setSearchTerm(e.target.value)}
+          placeholder="Titre ou ingrédient…"
+          aria-label="Rechercher une recette"
+        />
+        {searchTerm && (
+          <button onClick={() => setSearchTerm('')} aria-label="Effacer">
+            <X size={16} />
+          </button>
+        )}
+      </div>
+
+      <div className="tag-filters">
+        {TAG_GROUPS.flatMap(g => g.tags).map(tag => (
+          <button
+            key={tag}
+            className={`tag-chip${activeTags.includes(tag) ? ' active' : ''}`}
+            onClick={() => toggleTag(tag)}
+          >
+            {tag}
+          </button>
+        ))}
+        {activeTags.length > 0 && (
+          <button className="tag-clear" onClick={() => setActiveTags([])}>
+            Tout afficher
+          </button>
+        )}
+      </div>
+
+      <div className="recipes-grid">
+        {filtered.length === 0 && (
+          <p className="empty">
+            {recipes.length === 0
+              ? 'Aucune recette. Colle ta première recette avec « Nouvelle ».'
+              : 'Aucune recette ne correspond.'}
+          </p>
+        )}
         {filtered.map(r => (
-          <RecipeCard key={r.id} recipe={r} onSelect={openOverlay} />
+          <RecipeCard key={r.id} recipe={r} onSelect={setSelected} />
         ))}
       </div>
 
-      {/* overlay */}
       {selected && (
         <RecipeOverlay
           recipe={selected}
@@ -149,24 +131,51 @@ export default function Recipes() {
         />
       )}
 
-      {pasteMode && (
+      {creating && (
         <div
           className="overlay"
-          onClick={e => {
-            if (e.target === e.currentTarget) setPasteMode(false)
-          }}
+          onClick={e => { if (e.target === e.currentTarget) setCreating(false) }}
         >
           <div className="overlay-content" onClick={e => e.stopPropagation()}>
-            <button className="btn-close" onClick={() => setPasteMode(false)}>✖</button>
-            <h2 className="overlay-title">Importer une recette</h2>
+            <button className="btn-close" onClick={() => setCreating(false)}>✖</button>
+            <h2 className="overlay-title">Nouvelle recette</h2>
+            <p className="missing-hint">
+              Colle une recette entière (n'importe quel format) ou tape simplement un titre.
+            </p>
+
             <textarea
-              className="overlay-textarea"
-              value={pasteText}
-              onChange={e => setPasteText(e.target.value)}
-              placeholder={`Nom de la recette (X portions)\nINGRÉDIENTS:\nIngrédient 1 · Ingrédient 2\nÉTAPES:\nÉtape 1\nÉtape 2`}
+              className="overlay-textarea tall"
+              autoFocus
+              value={draft}
+              onChange={e => setDraft(e.target.value)}
+              placeholder={'Tarte aux pommes\n\nIngrédients :\n- 1 pâte brisée\n- 4 pommes\n- 100 g de sucre\n\nPréparation :\n1. Préchauffer le four à 180°C\n2. Étaler la pâte'}
             />
+
+            {preview && (
+              <div className="parse-preview">
+                <strong>{preview.title || '(titre manquant)'}</strong>
+                <span>
+                  {preview.ingredients.length} ingrédient{preview.ingredients.length > 1 ? 's' : ''}
+                  {' · '}
+                  {preview.steps.length} étape{preview.steps.length > 1 ? 's' : ''}
+                </span>
+                {preview.ingredients.length > 0 && (
+                  <p className="parse-preview-list">
+                    {preview.ingredients.map(i => i.name).join(', ')}
+                  </p>
+                )}
+              </div>
+            )}
+
             <div className="overlay-footer">
-              <button className="btn-save" onClick={importFromText}>💾 Importer</button>
+              <button className="btn-modify" onClick={() => setCreating(false)}>Annuler</button>
+              <button
+                className="btn-save"
+                onClick={createRecipe}
+                disabled={!preview?.title}
+              >
+                Créer
+              </button>
             </div>
           </div>
         </div>

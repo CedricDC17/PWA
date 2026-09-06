@@ -1,0 +1,332 @@
+/* ==========================================================================
+   Page Recettes
+   ========================================================================== */
+.recipes-page-inner {
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.recipes-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.recipes-header h2 {
+    font-size: 1.35rem;
+}
+
+.recipes-header .btn-add {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+/* ---------- Recherche ---------- */
+.recipes-search {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--bg-alt);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0 0.75rem;
+    color: var(--text-faint);
+}
+
+.recipes-search:focus-within {
+    border-color: var(--accent);
+}
+
+.recipes-search input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-size: 1rem;
+    padding: 0.75rem 0;
+    min-height: 44px;
+}
+
+.recipes-search input:focus {
+    outline: none;
+}
+
+.recipes-search input::placeholder {
+    color: var(--text-faint);
+}
+
+.recipes-search button {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    padding: 0.4rem;
+    display: flex;
+    align-items: center;
+}
+
+/* ---------- Tags ---------- */
+.tag-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.tag-filters.view-only {
+    margin-bottom: 1rem;
+}
+
+.tag-chip {
+    background: var(--surface-2);
+    border: 1px solid transparent;
+    color: var(--text-muted);
+    border-radius: 999px;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+    min-height: 36px;
+}
+
+.tag-chip:hover {
+    background: var(--surface-hover);
+    border-color: var(--border);
+}
+
+.tag-chip.active {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent-strong);
+    font-weight: 600;
+}
+
+.tag-chip.small {
+    font-size: 0.72rem;
+    padding: 0.15rem 0.5rem;
+    min-height: 0;
+    background: var(--accent-soft);
+    color: var(--accent-strong);
+}
+
+.tag-clear {
+    background: transparent;
+    border: none;
+    color: var(--text-faint);
+    font-size: 0.85rem;
+    text-decoration: underline;
+    padding: 0.4rem 0.5rem;
+}
+
+.tag-group {
+    margin-bottom: 0.85rem;
+}
+
+.tag-group-label {
+    display: block;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-faint);
+    margin-bottom: 0.4rem;
+}
+
+.tag-group-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+/* ---------- Grille de fiches ---------- */
+.recipes-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.85rem;
+}
+
+@media (min-width: 700px) {
+    .recipes-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (min-width: 1000px) {
+    .recipes-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+.recipes-grid .empty {
+    grid-column: 1 / -1;
+}
+
+.recipe-card {
+    display: flex;
+    flex-direction: column;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    padding: 0;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.2s, transform 0.15s;
+}
+
+.recipe-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+}
+
+.recipe-thumb {
+    width: 100%;
+    height: 110px;
+    object-fit: cover;
+    display: block;
+}
+
+.recipe-thumb.placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--surface-2), var(--bg-alt));
+    color: var(--accent);
+    opacity: 0.85;
+}
+
+.recipe-card-body {
+    padding: 0.7rem 0.8rem 0.85rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    flex: 1;
+}
+
+.recipe-card-title {
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.25;
+    color: var(--text);
+    overflow-wrap: break-word;
+}
+
+.recipe-card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    align-items: center;
+}
+
+.tag-more {
+    font-size: 0.7rem;
+    color: var(--text-faint);
+}
+
+.recipe-card-meta {
+    margin-top: auto;
+    font-size: 0.78rem;
+    color: var(--text-faint);
+}
+
+/* ---------- Aperçu du parseur ---------- */
+.parse-preview {
+    background: var(--bg-alt);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 10px;
+    padding: 0.75rem 0.9rem;
+    margin-top: 0.85rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.9rem;
+}
+
+.parse-preview span {
+    color: var(--accent-strong);
+    font-size: 0.82rem;
+}
+
+.parse-preview-list {
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    line-height: 1.4;
+}
+
+/* ---------- Édition ---------- */
+.overlay-textarea.tall {
+    min-height: 9rem;
+}
+
+.field-hint {
+    color: var(--text-faint);
+    font-size: 0.78rem;
+    font-style: italic;
+    margin-top: 0.4rem;
+}
+
+.ing-qty {
+    color: var(--accent-strong);
+    font-weight: 600;
+}
+
+.image-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.image-actions .btn-small {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-bottom: 0;
+}
+
+.overlay-footer .btn-save,
+.overlay-footer .btn-delete {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.overlay-footer .btn-save:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ---------- Repas libre (sélecteur du planning) ---------- */
+.free-meal-option {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    width: 100%;
+    background: var(--bg-alt);
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+    padding: 0.8rem 0.9rem;
+    color: var(--text);
+    text-align: left;
+    margin-top: 0.75rem;
+    min-height: 48px;
+}
+
+.free-meal-option:hover {
+    border-color: var(--accent);
+    border-style: solid;
+}
+
+.free-meal-option strong {
+    color: var(--accent-strong);
+}
+
+.slot-free {
+    font-style: italic;
+    color: var(--text-muted);
+}

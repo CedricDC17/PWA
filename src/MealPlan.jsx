@@ -46,6 +46,19 @@ export default function MealPlan() {
     }
   };
 
+  // Repas libre : simple étiquette, sans fiche recette ni étape ingrédients.
+  const assignFreeMeal = async text => {
+    if (!picker) return;
+    const title = text.trim();
+    if (!title) return;
+    const { day, time } = picker;
+    await setDoc(planRef, {
+      ...plan,
+      [day]: { ...plan[day], [time]: { title, free: true } }
+    });
+    setPicker(null);
+  };
+
   const removeSlot = (day, time, e) => {
     e.stopPropagation();
     const dayPlan = { ...plan[day] };
@@ -108,7 +121,9 @@ export default function MealPlan() {
                   <td key={t} onClick={() => openPicker(day, t)}>
                     {slot?.title ? (
                       <>
-                        <span>{slot.title}</span>
+                        <span className={`slot-title${slot.free ? ' slot-free' : ''}`}>
+                          {slot.title}
+                        </span>
                         <button
                           className="slot-remove"
                           onClick={e => removeSlot(day, t, e)}
@@ -136,6 +151,7 @@ export default function MealPlan() {
           day={picker.day}
           time={picker.time}
           onSelect={assignRecipe}
+          onSelectFree={assignFreeMeal}
           onClose={closePicker}
         />
       )}
